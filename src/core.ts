@@ -4,43 +4,26 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { TavilySearch } from "@langchain/tavily";
 import { HumanMessage, SystemMessage, AIMessage } from "langchain";
-import { tool_webSearch } from "./tools.js";
-import { OpenAITool,Providers,ProviderMap } from "./types.js";
+import { tool_webSearch } from "./tools-def.js";
+import { OpenAITool,Providers,ProviderMap, ClaudeTool, GeminiTool } from "./types.js";
+import { Tools } from "./tools.js";
 
 // dotenv.config();
 
 class LLMCore{
     private api:string;
-    private search_model_setup:boolean = false;
     private model:ChatOpenAI|ChatGoogleGenerativeAI|ChatAnthropic;
-    private toolDefinition:OpenAITool = tool_webSearch.openai;
-    private tool = new Map();
-    private search_model!: TavilySearch;
+    private toolDefinition:(OpenAITool|ClaudeTool|GeminiTool)[];
+    private getToolFromName = new Map();
+    private tools:Tools;
 
-    constructor(provider:Providers , model:string ,api:string){
+    constructor(provider:Providers , model:string ,api:string ,search_api:string){
         this.api = api;
         const LLM = ProviderMap[provider];
+        this.tools = new Tools(search_api);
+        this.getToolFromName.set("web_search",this.tools.web_search.bind(this.tools));
+        this.toolDefinition = [tool_webSearch[provider]];
         this.model = new LLM({ model, apiKey: api });
-    }
-
-    private async web_search(arg:{query:string}){
-        try{
-            const search_res = await this.search_model.invoke(arg);
-            return search_res;
-        }catch(error){
-            throw new Error((error as Error).message);
-        }
-    }
-
-    set_current_search(api:string){
-        this.search_model = new TavilySearch({tavilyApiKey:api,maxResults:5});
-        this.search_model_setup = true;
-        this.tool.set("web_search",this.web_search.bind(this));
-    }
-
-
-    define_model(model:string){
-        this.model = new ChatOpenAI({model:model,apiKey:this.api})
     }
 
     async query(ask:string):Promise<string>{
@@ -60,7 +43,7 @@ class LLMCore{
             `),
             new HumanMessage(ask)
         ];
-        const res = await this.model.invoke(messages,{tools: [this.toolDefinition] , tool_choice:"auto"});
+        const res = await this.model.invoke(messages,{tools: this.toolDefinition , tool_choice:"auto"});
         if(!res.tool_calls || res.tool_calls.length == 0) return res.text;
         else{
             const toolCall = res.tool_calls[0];
@@ -68,8 +51,7 @@ class LLMCore{
             const tool_arg = toolCall.args;
             const tool_id = toolCall.id;
 
-            if(!this.search_model_setup) throw new Error("API key not set for search model");
-            const res_web = await this.tool.get(tool_name)(tool_arg);
+            const res_web = await this.getToolFromName.get(tool_name)(tool_arg);
 
             messages.push(new AIMessage(res));
             messages.push({

@@ -5,7 +5,8 @@ import { ChatOpenAI } from "@langchain/openai";
 export type Config = {
     provider:Providers,
     model:string,
-    api:string
+    api:string,
+    search_api:string
 } | undefined;
 
 export enum Providers{

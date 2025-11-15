@@ -16,29 +16,46 @@ const config = new Conf({projectName: 'arka-cli'});
 program
     .version("0.0.1")
     .description("Your ai assistant in your cli")
+    .addHelpText('after', `
+        Getting Started:
+          1. Configure your provider and model: arka configure
+          2. Set your API key: arka set-api --api <api_key>
+          3. Set you API key for tavily: arka set-api --search <api_key>
+          4. Start asking questions: arka ask "your question"
+        
+        Example:
+          $ arka configure
+          $ arka set-api --api <api_key>
+          $ arka set-api --search <api_key>
+          $ arka ask Who won the recent fifa worldcup and why is ronaldo crying
+    `);
 
 program
     .command('set-api')
-    .description('Set api for your model')
-    .argument('<api>')
-    .action((api)=>{
+    .description('Set api for your model and search agent')
+    .option('--api <value>','api')
+    .option('--search <value>','search_api')
+    .action((options)=>{
         const set_config = config.get("config") as Config;
         if(!set_config || set_config == undefined){
             console.log(chalk.bold.red("Configure your model and provider first"));
             process.exit(1);
         }
-        config.set("config.api",api);
+
         const provider = set_config.provider;
         const model = set_config.model;
 
-        console.log(chalk.greenBright(`Api set for ${provider} - ${model}`));
-    })
+        const { api, search } = options;
 
-program
-    .command('delete-api')
-    .action((api)=>{
-        config.delete('api');
-        // console.log(config.get("api"));
+        if(api){
+            config.set("config.api",api);
+            console.log(chalk.greenBright(`Api set for ${provider} - ${model}`));
+        };
+
+        if(search){
+            config.set("config.search_api",search);
+            console.log(chalk.greenBright("Api set for search agent"));
+        }
     })
 
 program 
@@ -47,19 +64,12 @@ program
        config.delete("config");
     })
 
-program
-    .command('set-search-api')
-    .description('Set api for your search model')
-    .argument('<api>')
-    .action((api)=>{
-        config.set('search-api',api);
-    })
-
 program.
     command('see-api')
     .action(()=>{
-        const api = config.get("api");
-        console.log( api ? api : "Undefined");
+        const api = config.get("config.api");
+        const search_api = config.get("config.search_api");
+        console.log(api ? chalk.bold.green("Api: ",api,"\n") : chalk.bold.red("Api not set") , search_api ? chalk.bold.green("Search_api: ",search_api) : chalk.bold.red("Search api not set"));
     })
 
 
@@ -76,16 +86,26 @@ program
             spinner.fail("You haven't configured your provider and model yet");
             process.exit(1);
         }else{
+            const search_api = set_config.search_api;
+            const api = set_config.api;
+
+            if (!api && !search_api) {
+                spinner.fail("Api not found, Please set api for llm provider and search agent");
+                process.exit(1);
+            }
+            
+            if (!api) {
+                spinner.fail("Api not found, Please set api for your provider");
+                process.exit(1);
+            }
+            
+            if (!search_api) {
+                spinner.fail("Search api not found, Please set api for your search agent");
+                process.exit(1);
+            }
+
             try {
-                const search_api_key = config.get("search-api") as string | undefined;
-
-                if(!set_config.api || set_config.api === ""){
-                    spinner.fail("Api not found , Please set api for your provider");
-                    process.exit(1);
-                }
-
-                const llm = new LLMCore(set_config.provider,set_config.model,set_config.api);
-                if(search_api_key) llm.set_current_search(search_api_key);
+                const llm = new LLMCore(set_config.provider,set_config.model,api,search_api);
                 const res = await llm.query(query);
                 spinner.stop();
                 console.log(chalk.cyan.bold("\n🤖: ",res));
@@ -106,7 +126,7 @@ program
     .description('Configure AI provider and model')
     .action(async() => {
         const {provider , model} = await selectProviderandModel();
-        config.set("config",{provider,model,api:""})
+        config.set("config",{provider,model,api:"",search_api:""})
         console.log(chalk.greenBright(`Selected: ${provider} - ${model} \n`));
         console.log(chalk.yellowBright.bold("Set your api key by running the command <set-api> \n"));
     })

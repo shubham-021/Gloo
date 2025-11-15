@@ -1,47 +1,18 @@
-import { ToolMap,Providers } from "./types.js";
+import { TavilySearch } from "@langchain/tavily";
 
-export const tool_webSearch: ToolMap = {
-    [Providers.OpenAI]: {
-      type: "function",
-      function: {
-        name: "web_search",
-        description: "Search the web.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: { type: "string", description: "Search query" }
-          },
-          required: ["query"]
+export class Tools{
+    private search_model:TavilySearch;
+
+    constructor(api:string){
+        this.search_model = new TavilySearch({tavilyApiKey:api,maxResults:5})
+    };
+
+    async web_search(arg:{query:string}){
+        try{
+            const search_res = await this.search_model.invoke(arg);
+            return search_res;
+        }catch(error){
+            throw new Error((error as Error).message);
         }
-      }
-    },
-  
-    [Providers.Gemini]: {
-      function_declarations: [
-        {
-          name: "web_search",
-          description: "Search the web.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string" }
-            },
-            required: ["query"]
-          }
-        }
-      ]
-    },
-  
-    [Providers.Claude]: {
-      name: "web_search",
-      description: "Search the web.",
-      input_schema: {
-        type: "object",
-        properties: {
-          query: { type: "string" }
-        },
-        required: ["query"]
-      }
     }
-  };
-  
+}
