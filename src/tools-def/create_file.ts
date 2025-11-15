@@ -1,6 +1,6 @@
 import { ToolMap,Providers } from "../types.js";
 
-export const currLoc: ToolMap = {
+export const createFile: ToolMap = {
     [Providers.OpenAI]: {
         type: "function",
         function: {

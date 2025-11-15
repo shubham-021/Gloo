@@ -2,11 +2,10 @@ import * as dotenv from "dotenv"
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { TavilySearch } from "@langchain/tavily";
 import { HumanMessage, SystemMessage, AIMessage } from "langchain";
-import { webSearch } from "./tools-def/web_search.js";
 import { OpenAITool,Providers,ProviderMap, ClaudeTool, GeminiTool } from "./types.js";
 import { Tools } from "./tools.js";
+import { get_prompt } from "./prompt/prompt.js"
 
 // dotenv.config();
 
@@ -22,7 +21,7 @@ class LLMCore{
         const LLM = ProviderMap[provider];
         this.tools = new Tools(search_api);
         this.getToolFromName.set("web_search",this.tools.web_search.bind(this.tools));
-        this.toolDefinition = [webSearch[provider]];
+        this.toolDefinition = this.tools.get_toolDefinition(provider);
         this.model = new LLM({ model, apiKey: api });
     }
 
@@ -35,12 +34,10 @@ class LLMCore{
         })
         // console.log(currentDate);
 
-        const messages:(SystemMessage|HumanMessage|AIMessage|{role:string,content:string,tool_call_id?:string,name:string})[] = [
-            new SystemMessage(`You are ai assistant , you can chat with users as their necessity. If users ask about recent events or current information,
-                use the web_search tool with the correct date in the query. You can use the current date given to generate a precise query.
+        const PROMPT = get_prompt(currentDate);
 
-                Current Date: ${currentDate}
-            `),
+        const messages:(SystemMessage|HumanMessage|AIMessage|{role:string,content:string,tool_call_id?:string,name:string})[] = [
+            new SystemMessage(PROMPT),
             new HumanMessage(ask)
         ];
         const res = await this.model.invoke(messages,{tools: this.toolDefinition , tool_choice:"auto"});
