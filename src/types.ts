@@ -32,7 +32,9 @@ export enum OpenAIModels{
 
 export enum GeminiModels{
     Gemini15Pro = "gemini-1.5-pro",
-    Gemini15Flash = "gemini-1.5-flash"
+    Gemini15Flash = "gemini-1.5-flash",
+    Gemini25Pro = "gemini-2.5-pro",
+    Gemini25Flash = "gemini-2.5-flash"
 }
 
 export enum ClaudeModels {

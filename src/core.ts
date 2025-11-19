@@ -1,4 +1,3 @@
-import * as dotenv from "dotenv"
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatAnthropic } from "@langchain/anthropic";
@@ -36,9 +35,9 @@ class LLMCore{
             month: "long",
             day: "numeric"
         })
-        // console.log(currentDate);
+        // console.log("Current Date: ",currentDate);
 
-        const DEC_PROMPT =  `You are an AI agent whose job is to verify if user has asked to a simply query or to build something on his machine. 
+        const DEC_PROMPT =  `You are an AI agent whose job is to verify if user has asked to do a simply query or to build something on his machine. 
             If query is to build any project:
                 Response format: {"build":true}
             else
@@ -54,6 +53,7 @@ class LLMCore{
         ];
 
         const build = (await this.model.withStructuredOutput(DEC_PROMPT_RESPONSE).invoke(pre_message)).build;
+        // console.log("Build: ",build);
         const memory = loadMemory();
 
         if(!build){
@@ -65,6 +65,41 @@ class LLMCore{
             ];
 
             let res = await this.model.invoke(messages,{tools: this.toolDefinition , tool_choice:"auto"});
+            if(res.tool_calls && res.tool_calls.length>0){
+                messages.push(new AIMessage({content : res.content , tool_calls: res.tool_calls}));
+                // console.log("Tools called: ",JSON.stringify(res.tool_calls));
+                for( const toolCall of res.tool_calls){
+                    const tool_name = toolCall.name;
+                    const tool_arg = toolCall.args;
+                    const tool_id = toolCall.id;
+
+                    // console.log("Running: " , tool_name , "\n");
+                    const tool = await this.getToolFromName.get(tool_name);
+                    let toolResult;
+
+                    try{
+                        toolResult = await tool(tool_arg);
+                        // console.log(JSON.stringify(toolResult));
+                    }catch(err){
+                        toolResult = `TOOL ERROR: ${(err as Error).message}`;
+                    }
+
+                    messages.push({
+                        role:"tool",
+                        name: tool_name,
+                        tool_call_id: tool_id,
+                        content: tool_name === "web_search" ? JSON.stringify(toolResult.results ?? toolResult.result ?? null) : String(toolResult)
+                    });
+                    // console.log("Content: ",JSON.stringify(toolResult.results ?? toolResult.result ?? null));
+                }
+
+                // console.log("Messages: ",JSON.stringify(messages));
+                res = await this.model.invoke(messages,{tools:this.toolDefinition,tool_choice:"auto"});
+                messages.push(new AIMessage({content : res.content , tool_calls: res.tool_calls}));
+            }else{
+                messages.push(new AIMessage(res.text));
+            }
+
             const compressionPrompt = [
                 new SystemMessage("Summarize the conversation below so future messages retain necessary context. Be concise."),
                 new HumanMessage(`
@@ -91,7 +126,7 @@ class LLMCore{
             let planner_res = await this.model.invoke(messages);
 
             const PLANNER_RES = planner_res.text;
-            console.log(PLANNER_RES);
+            // console.log(PLANNER_RES);
 
             messages.push(new AIMessage({content:planner_res.content}));
 

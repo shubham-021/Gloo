@@ -6,7 +6,7 @@ import figlet from "figlet";
 import ora, { spinners } from "ora";
 import Conf from 'conf';
 import LLMCore from "./core.js";
-import { selectProviderandModel } from "./inquirer.js";
+import { selectConfig, selectModel, selectProviderandModel } from "./inquirer.js";
 import { Config } from "./types.js";
 import inquirer from "inquirer";
 
@@ -33,35 +33,50 @@ program
 program
     .command('set-api')
     .description('Set api for your model and search agent')
+    .option('-n <value>','name')
     .option('--api <value>','api')
     .option('--search <value>','search_api')
     .action((options)=>{
-        const set_config = config.get("config") as Config;
+
+        const { n, api, search } = options;
+
+        if(!n){
+            console.log(chalk.yellow.bold("Provide config name using -n flag"));
+            process.exit(1);
+        }
+
+        if(search){
+            config.set(`${n}.search_api`,search);
+            console.log(chalk.greenBright("Api set for search agent"));
+            process.exit(1);
+        }
+
+        const set_config = config.get(n) as Config;
         if(!set_config || set_config == undefined){
-            console.log(chalk.bold.red("Configure your model and provider first"));
+            console.log(chalk.bold.red("No config exists with this name.\n"));
+            console.log(chalk.bold.red("Are you sure , you have configured your cli before ?"));
             process.exit(1);
         }
 
         const provider = set_config.provider;
         const model = set_config.model;
 
-        const { api, search } = options;
-
         if(api){
-            config.set("config.api",api);
-            console.log(chalk.greenBright(`Api set for ${provider} - ${model}`));
+            config.set(`${n}.api`,api);
+            console.log(chalk.greenBright(`Api set for ${n} : ${provider} - ${model}`));
         };
-
-        if(search){
-            config.set("config.search_api",search);
-            console.log(chalk.greenBright("Api set for search agent"));
-        }
     })
 
 program 
     .command("delete-config")
-    .action(async ()=>{
-       config.delete("config");
+    .option("-n <value>","name")
+    .action(async (options)=>{
+        const {n} = options;
+        if(!n){
+            console.log(chalk.yellow.bold("Provide config name using -n flag"));
+            process.exit(1);
+        }
+       config.delete(n);
     })
 
 program.
@@ -80,7 +95,12 @@ program
     .action(async (allArgs)=>{
         const query = allArgs.join(' ');
         const spinner = ora({spinner:"dots8Bit"}).start();
-        const set_config = config.get("config") as Config;
+        const default_config = config.get("default") as string;
+        if(!default_config){
+            console.log(chalk.redBright.bold("You have not configured your cli yet"));
+            process.exit(1);
+        }
+        const set_config = config.get(default_config) as Config;
         // console.log(JSON.stringify(set_config));
         if(!set_config){
             spinner.fail("You haven't configured your provider and model yet");
@@ -122,13 +142,92 @@ program
     })
 
 program
+    .command('switch')
+    .option('-n <value>')
+    .action((options)=>{
+        const {n} = options;
+        if(!n){
+            console.log(chalk.yellowBright.bold("Provide the name of the config using -n flag"));
+            process.exit(1);
+        }
+
+        const _config = config.get(n);
+        if(!_config){
+            console.log(chalk.redBright.bold("No config exist with this name"));
+            process.exit(1);
+        }
+
+        const default_config = config.get("default");
+
+        if(default_config === n){
+            chalk.yellowBright.bold(`Config ${n} is already set as default`);
+            process.exit(1);
+        }
+
+        config.set("default",n);
+        console.log(chalk.greenBright.bold(`Config ${n} is set as default`));
+    })
+
+program
     .command('configure')
     .description('Configure AI provider and model')
-    .action(async() => {
+    .option("-n <value>","name")
+    .option("-m <value>","model")
+    .option("-p <value>","provider")
+    .action(async(options) => {
+        const {n,m,p} = options;
+        if(!n){
+            console.log(chalk.yellowBright.bold("Provide a name for your config using the -n flag"));
+            process.exit(1);
+        }
+
+        if(m){
+            const _config = config.get(n) as Config;
+            if(!_config || !_config.provider){
+                console.log(chalk.red.bold("Set your provider first"));
+                process.exit(1);
+            }
+            const {model} = await selectModel(_config.provider);
+            config.set(`${n}.model`,model);
+            process.exit(1);
+        }
+
+        if(p){
+            const _config = config.get(n) as Config;
+            if(!_config){
+                console.log(chalk.red.bold("This is only valid if you had any config before."));
+                process.exit(1);
+            }
+            const {model,provider} = await selectProviderandModel();
+            config.set(`${n}.provider`,provider);
+            config.set(`${n}.model`,model);
+            process.exit(1);
+        }
+
         const {provider , model} = await selectProviderandModel();
-        config.set("config",{provider,model,api:"",search_api:""})
+        config.set(n,{provider,model,api:"",search_api:""})
+        config.set("default",n);
         console.log(chalk.greenBright(`Selected: ${provider} - ${model} \n`));
         console.log(chalk.yellowBright.bold("Set your api key by running the command <set-api> \n"));
+    })
+
+program
+    .command("see-config")
+    .action(async()=>{
+        const all_config = config.store;
+        const config_names = Object.keys(all_config).filter((name) => name !== "default");
+        const config_s = await selectConfig(config_names);
+        const get_config = config.get(config_s) as Config;
+
+        const payload = {
+            "config" : config_s,
+            "provider" : get_config?.provider,
+            "model" : get_config?.model,
+            "api" : get_config?.api
+        };
+
+        console.log(chalk.cyan.bold(JSON.stringify(payload)));
+        process.exit(1);
     })
 
 // process.argv returns an array containing all the command-line arguments passed when the Node.js process was launched.

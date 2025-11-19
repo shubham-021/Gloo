@@ -24,3 +24,31 @@ export async function selectProviderandModel(){
 
     return {provider,model};
 }
+
+export async function selectModel(provider:string){
+    const availableModels = getModelsForProvider(provider as Providers);
+
+    const {model} = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'model',
+            message: `Select a ${provider} model from the list: `,
+            choices: availableModels
+        }
+    ]);
+
+    return model;
+}
+
+export async function selectConfig(configList:string[]){
+    const {config_s} = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'config_s',
+            message: `Select from the list: `,
+            choices: configList
+        }
+    ]);
+
+    return config_s;
+}
