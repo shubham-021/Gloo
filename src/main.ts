@@ -18,9 +18,9 @@ program
     .description("Your ai assistant in your cli")
     .addHelpText('after', `
         Getting Started:
-          1. Configure your provider and model: arka configure
-          2. Set your API key: arka set-api --api <api_key>
-          3. Set you API key for tavily: arka set-api --search <api_key>
+          1. Configure your provider and model: arka configure -n <config_name>
+          2. Set your API key: arka -n <config_name> set-api --api <api_key>
+          3. Set you API key for tavily: arka -n <config_name> set-api --search <api_key>
           4. Start asking questions: arka ask "your question"
         
         Example:
@@ -242,7 +242,7 @@ program
 
 if (!process.argv.slice(2).length) {
     console.log(chalk.cyan(figlet.textSync("Arka",{horizontalLayout:"full",verticalLayout:"full",width:180})));
-    program.outputHelp();
+    // program.outputHelp();
 }
 
 program.parse(process.argv);
