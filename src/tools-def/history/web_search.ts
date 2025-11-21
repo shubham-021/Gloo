@@ -1,4 +1,4 @@
-import { ToolMap,Providers } from "../types.js";
+import { ToolMap,Providers } from "../../types.js";
 
 export const webSearch: ToolMap = {
     [Providers.OpenAI]: {

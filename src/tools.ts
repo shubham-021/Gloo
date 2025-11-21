@@ -2,14 +2,7 @@ import { TavilySearch } from "@langchain/tavily";
 import fs from 'node:fs'
 import { readFile } from "node:fs/promises";
 import path from 'node:path'
-import { webSearch } from "./tools-def/web_search.js";
-import { currLoc } from "./tools-def/current_loc.js";
-import { makeDir } from "./tools-def/make_dir.js"
-import { writeFile } from "./tools-def/write_file.js";
-import { appendFile } from "./tools-def/append_file.js";
-import { createFile } from "./tools-def/create_file.js"
-import { parsePDF } from "./tools-def/parse_pdf.js"
-import { executeCommand } from "./tools-def/execute_command.js"
+import {all_def} from "./tools-def/all_def.js"
 import { Providers, ToolMap } from "./types.js";
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -20,7 +13,7 @@ const execAsync = promisify(exec);
 
 export class Tools{
     private search_model:TavilySearch;
-    private tool_definition_list:ToolMap[] = [currLoc,makeDir,writeFile,appendFile,createFile,webSearch,executeCommand,parsePDF];
+    private tool_definition_list:ToolMap[] = all_def;
     private fn_with_name = [
         ["web_search",this.web_search.bind(this)],
         ["append_file",this.append_file.bind(this)],
@@ -29,7 +22,8 @@ export class Tools{
         ["make_dir",this.make_dir.bind(this)],
         ["write_file",this.write_file.bind(this)],
         ["execute_command",this.execute_command.bind(this)],
-        ["parse_pdf",this.parse_pdf.bind(this)]
+        ["parse_pdf",this.parse_pdf.bind(this)],
+        ["read_file",this.read_file.bind(this)]
     ]
     getToolFromName = new Map();
 
@@ -166,5 +160,14 @@ export class Tools{
         }catch(error){
             return `Error reading this file , Error:${(error as Error).message}`
         }
+    }
+
+    async read_file(arg:{path:string}):Promise<string>{
+        const path = arg.path;
+        const buffer = await readFile(path);
+
+        const text = buffer.toString();
+
+        return text;
     }
 }

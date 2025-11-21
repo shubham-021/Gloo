@@ -1,16 +1,16 @@
-import { ToolMap,Providers } from "../types.js";
+import { ToolMap,Providers } from "../../types.js";
 
-export const writeFile: ToolMap = {
+export const appendFile: ToolMap = {
     [Providers.OpenAI]: {
         type: "function",
         function: {
-            name: "write_file",
-            description: "Write content to a file. Overwrites existing content.",
+            name: "append_file",
+            description: "Append content to a file.",
             parameters: {
             type: "object",
             properties: {
-                path: { type: "string", description: "File path to write to" },
-                content: { type: "string", description: "Content to write" }
+                path: { type: "string", description: "File path to append to" },
+                content: { type: "string", description: "Content to append" }
             },
             required: ["path", "content"]
             }
@@ -19,8 +19,8 @@ export const writeFile: ToolMap = {
   
     [Providers.Gemini]: {
         function_declarations: [{
-            name: "write_file",
-            description: "Write content to a file. Overwrites existing content.",
+            name: "append_file",
+            description: "Append content to a file.",
             parameters: {
             type: "object",
             properties: {
@@ -33,13 +33,13 @@ export const writeFile: ToolMap = {
     },
   
     [Providers.Claude]: {
-        name: "write_file",
-        description: "Write content to a file. Overwrites existing content.",
+        name: "append_file",
+        description: "Append content to a file.",
         input_schema: {
             type: "object",
             properties: {
-            path: { type: "string" },
-            content: { type: "string" }
+                path: { type: "string" },
+                content: { type: "string" }
             },
             required: ["path", "content"]
         }

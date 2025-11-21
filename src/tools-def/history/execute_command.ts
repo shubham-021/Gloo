@@ -1,4 +1,4 @@
-import { Providers, ToolMap } from "../types.js";
+import { Providers, ToolMap } from "../../types.js";
 
 export const executeCommand: ToolMap = {
     [Providers.OpenAI] : {

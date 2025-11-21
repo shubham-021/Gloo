@@ -1,57 +1,57 @@
 # Arka CLI
 
-Arka is a terminal-first AI assistant that lets you route prompts to OpenAI, Anthropic, or Google Gemini models, execute planning workflows, and augment responses with Tavily-powered search results. It stores multiple credentialed configurations locally so you can swap providers or models on demand without re-entering keys.
+Arka is a terminal-first AI assistant that routes every prompt to the most appropriate workflow—simple chat, web search, or a build-mode planner/executor loop—across OpenAI, Anthropic, or Google Gemini models. It runs entirely in your local shell, keeps per-provider credentials in Conf, and enforces CLI-only responses so generated answers stay in the terminal unless you explicitly request file edits.
 
-## Features
-- Provider-agnostic setup with curated OpenAI, Claude, and Gemini model menus.
-- Local key management via `conf`, including separate LLM and Tavily search API keys.
-- Automated detection of simple chats vs. build-style requests that trigger a planner/executor loop.
-- LangChain-powered tool calling with a shared tool registry, including web search.
-- Persistent memory summaries so answers stay grounded in prior conversations.
-- Commander-based CLI with interactive flows powered by Inquirer and informative Chalk/ORA UI.
+## Key Capabilities
+- **Provider agnostic**: Pick GPT-4/5, Claude 3.x, Gemini 1.5/2.5 (and custom IDs) via interactive menus.
+- **Local credential store**: `conf` keeps LLM and Tavily search keys per named config; no need to re-enter secrets.
+- **Router + DEC classifier**: Automatically separates web/info queries from project-aware build tasks.
+- **Planner/executor pipeline**: Planner emits capability-tagged steps; executor runs them sequentially with LangChain tools while obeying the “CLI output only” rule.
+- **Tool registry**: Centralized tool definitions (`src/tools.ts`) expose fs, shell, and web-search helpers to every model.
+- **Memory summaries**: Conversations are compressed after each run so future calls stay in context.
+- **Commander-based CLI**: Friendly `arka` binary with `configure`, `set-api`, `ask`, and other admin commands.
 
 ## Installation
 ```bash
 npm install -g @arka07/clai
 ```
-The binary is exposed as `arka`. Ensure you have Node.js 18+ and a Tavily account alongside your chosen LLM provider.
+Requirements: Node.js 18+, a supported LLM provider key, and a Tavily API key for search-enabled answers.
 
 ## Quick Start
-1. `arka configure -n <config_name>` to pick a provider and model (stored as default).
-2. `arka -n <config_name> set-api --api <llm_api_key>` to save the LLM key.
-3. `arka -n <config_name> set-api --search <tavily_api_key>` to enable tool calls.
-4. `arka ask "Who won the recent FIFA World Cup ?"`
+1. `arka configure -n first-run` – choose provider/model and set defaults.
+2. `arka set-api -n first-run --api <llm_key>` – store the model key securely.
+3. `arka set-api -n first-run --search <tavily_key>` – enable web/search tool calls.
+4. `arka ask "Summarize src/core.ts"` – the router will pick build mode, plan the steps, and stream the final summary directly to your terminal.
 
-The spinner shows progress while the agent streams through LangChain; final answers render once tool executions finish.
+All results stay in the CLI unless you explicitly request file creation or edits.
 
 ## CLI Commands
-- `arka configure (-n <name>)`: Create or update a config. Without `-m` or `-p`, launches provider+model selection and seeds empty API fields. With `-m`, only the model picker runs for that config; with `-p`, you can reselect provider and model together.
-- `arka set-api -n <name> (--api|--search <key>)`: Persist the model or Tavily key for the named config. Requires an existing configuration.
-- `arka delete-config -n <name>`: Remove a configuration (and its stored keys) from the Conf store.
-- `arka see-config`: Presents saved configurations via Inquirer and prints the chosen payload as JSON.
-- `arka see-api`: Prints the default config’s API and search keys if present.
-- `arka switch -n <name>`: Mark a different configuration as the global default.
-- `arka ask <query>`: Runs the conversational agent using the default configuration, including planner/executor mode when the classifier deems the request a build task.
+- `arka configure (-n <name>)`: Create/update configs; optional `-p` or `-m` flags limit prompts to provider/model reselection.
+- `arka set-api -n <name> (--api|--search <key>)`: Persist LLM or Tavily keys.
+- `arka delete-config -n <name>`: Remove a config and its secrets.
+- `arka see-config`: List saved configs via Inquirer and print the selected payload.
+- `arka see-api`: Display the default config’s stored keys (if present).
+- `arka switch -n <name>`: Mark a config as default for future runs.
+- `arka ask <query>`: Run the agent; automatically decides between simple prompt, search, or planner/executor build loop.
 
-## Configuration Details
-Each config is shaped as:
-```
-{
-  "provider": "openai" | "gemini" | "claude",
-  "model": "<model_name>",
-  "api": "<llm_key>",
-  "search_api": "<tavily_key>"
-}
-```
-- Provider menus mirror `Providers` from `src/types.ts`, exposing GPT-5/4 variants, Gemini 1.5/2.5, and Claude 3 family models.
-- Models are instantiated via LangChain adapters defined in `ProviderMap`.
-- Tavily search is required for tool-augmented answers; without it, `arka ask` will exit with an error before invoking the LLM.
+## Planner / Executor Workflow
+1. **Router** (`src/prompt/router.ts`) tags build queries and appends `CLI_OUTPUT_ONLY_NO_UNREQUESTED_FILE_CREATION` so downstream prompts inherit the constraint.
+2. **Planner** (`src/prompt/planner.ts`) outputs numbered steps in the form `"<n>. Use Capability <1|2|3|4> to <action>."` and forbids Capability 1 (local context) from touching files unless you asked for the modification.
+3. **Executor** (`src/prompt/executer.ts`) executes each step sequentially, selecting tools that express the requested capability. It refuses to create files purely to show results and instead prints responses straight to the CLI.
 
-## How It Works
-- `src/core.ts` constructs `LLMCore`, which routes prompts through a DEC classifier to choose between the simple prompt template or the planner/executor pipeline.
-- Tool definitions come from `src/tools.ts`, and `Tools` keeps a lookup map so the agent can respond to tool call IDs.
-- After each interaction, `loadMemory` and `saveMemory` compress the transcript into a summary that seeds future System messages.
+Capabilities:
+| ID | Purpose | Examples |
+|----|---------|----------|
+| 1  | Local context interaction | read/write project files, inspect code |
+| 2  | External knowledge access | Tavily web search, reference lookups |
+| 3  | System/utility operations | run scripts, installs, commands |
+| 4  | Pure reasoning/analysis | summarize, decide, draft final answer |
 
-## Development
-- Run `pnpm install` to fetch dependencies, then `pnpm start` to execute `src/main.ts` directly.
-- Build output should live in `dist/`; publish-ready bundles should include compiled JavaScript plus the CLI bin entry noted in `package.json`.
+## Search Workflow
+When the router picks the `search` tool, `src/core.ts` loads the `get_simple_prompt`, invokes the model with web-search enabled tools, and still enforces CLI-only outputs. Tavily results are summarized before returning to the user.
+
+## Memory & Persistence
+- `loadMemory` / `saveMemory` summarize transcripts after each interaction so future prompts include a compact context snippet.
+- Configs live under the Conf store keyed by the name you pass to CLI switches.
+
+

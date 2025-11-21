@@ -9,8 +9,8 @@ import { get_planner_prompt } from "./prompt/planner.js"
 import { loadMemory, saveMemory } from "./memory/memory.js";
 import { get_executer_prompt } from "./prompt/executer.js";
 import { PROMPT as ROUTER_PROMPT } from "./prompt/router.js";
-import { build } from "./tools-def/router_tools/build.js"
-import { search } from "./tools-def/router_tools/search.js"
+import { router_tool_def } from "./tools-def/router_tools/def.js";
+import chalk from "chalk"; 
 
 
 // dotenv.config();
@@ -33,7 +33,7 @@ class LLMCore{
         this.tools = new Tools(search_api);
         this.getToolFromName = this.tools.getToolFromName;
         this.toolDefinition = this.tools.get_toolDefinition(provider);
-        this.routerToolDef = [build[provider],search[provider]];
+        this.routerToolDef = router_tool_def.map((def) => def[provider]);
         // this.model = new LLM({ model, apiKey: api });
         this.routerLLM = new LLM({model,apiKey:api});
         this.searchLLM = new LLM({model,apiKey:api});
@@ -50,7 +50,7 @@ class LLMCore{
             const tool_arg = toolCall.args;
             const tool_id = toolCall.id;
 
-            console.log("Running: " , tool_name , "\nwith arg: ",JSON.stringify(tool_arg),"\n");
+            console.log(chalk.greenBright.bold("Running: " , tool_name,"\n"));
             const tool = await this.getToolFromName.get(tool_name);
             let toolResult;
 
@@ -152,7 +152,8 @@ class LLMCore{
     }
 
     async search(toolArgs:{query:string},currentDate:string):Promise<string>{
-        const ask = toolArgs.query;
+        const routerNote = "CLI_OUTPUT_ONLY_NO_UNREQUESTED_FILE_CREATION";
+        const ask = `${toolArgs.query}\n\n${routerNote}`;
 
         const memory = loadMemory();
         const PROMPT = get_simple_prompt(currentDate);
@@ -173,85 +174,6 @@ class LLMCore{
         return res.text;
     }
 
-    // async query(ask:string):Promise<string>{
-    //     const currentDate = new Date().toLocaleDateString('en-US',{
-    //         weekday: "long",
-    //         year: "numeric",
-    //         month: "long",
-    //         day: "numeric"
-    //     })
-    //     // console.log("Current Date: ",currentDate);
-
-    //     const DEC_PROMPT =  `You are an AI agent whose job is to verify if user has asked to do a simply query , which can be completed or to build something on his machine. 
-    //         If query is to build any project:
-    //             Response format: {"build":true}
-    //         else
-    //             Response format: {"build":false}
-
-    //         Rule:
-    //             Follow the exact output schema that is provided.
-    //     `;
-
-    //     const pre_message:Message[] = [
-    //         new SystemMessage(DEC_PROMPT),
-    //         new HumanMessage(ask)
-    //     ];
-
-    //     const build = (await this.model.withStructuredOutput(DEC_PROMPT_RESPONSE).invoke(pre_message)).build;
-    //     // console.log("Build: ",build);
-    //     const memory = loadMemory();
-
-    //     if(!build){
-    //         const PROMPT = get_simple_prompt(currentDate);
-    //         const messages:Message[] = [
-    //             new SystemMessage(`${PROMPT}
-    //                 Memory Summary of Previous Conversation: ${memory.summary || "(empty)"}`),
-    //             new HumanMessage(ask)
-    //         ];
-
-    //         let res = await this.model.invoke(messages,{tools: this.toolDefinition , tool_choice:"auto"});
-    //         if(res.tool_calls && res.tool_calls.length>0){
-    //             this.call_tool(res,messages);
-    //         }else{
-    //             messages.push(new AIMessage(res.text));
-    //         }
-
-    //         this.summarize(res,memory,ask);
-    //         return res.text;
-    //     }else{
-    //         const PROMPT = get_planner_prompt(currentDate);
-    //         const pre_messages:Message[] = [
-    //             new SystemMessage(PROMPT),
-    //             new HumanMessage(ask)
-    //         ];
-    //         let planner_res = await this.model.invoke(pre_messages);
-
-    //         const PLANNER_RES = planner_res.text;
-    //         // console.log(PLANNER_RES);
-
-    //         // messages.push(new AIMessage({content:planner_res.content}));
-
-    //         const PROMPT_EXECUTOR = get_executer_prompt();
-
-    //         const messages:Message[] = [
-    //             new SystemMessage(`${PROMPT_EXECUTOR}
-    //                 Memory Summary of Previous Conversation: ${memory.summary || "(empty)"}`),
-    //             new HumanMessage(`Execute this plan:\n\n${PLANNER_RES}\n\nOriginal user request: ${ask}`)
-    //         ]
-
-    //         let res = await this.model.invoke(messages,{tools: this.toolDefinition , tool_choice:"auto"});
-
-    //         while(res.tool_calls && res.tool_calls.length > 0){
-    //             this.call_tool(res,messages);
-    //         }
-
-    //         messages.push(new AIMessage({content : res.content , tool_calls: res.tool_calls}));
-
-    //         this.summarize(res,memory,ask);
-    //         return res.text;
-    //     }
-    // }
-
     async build(toolArgs:{query:string},currentDate:string):Promise<string>{
         // console.log("here inside build\n");
         const memory = loadMemory();
@@ -268,7 +190,7 @@ class LLMCore{
         let planner_res = await this.plannerLLM.invoke(pre_messages);
 
         const PLANNER_RES = planner_res.text;
-        // console.log(PLANNER_RES,"\n");
+        console.log(PLANNER_RES,"\n");
         // console.log(PLANNER_RES);
 
         // messages.push(new AIMessage({content:planner_res.content}));

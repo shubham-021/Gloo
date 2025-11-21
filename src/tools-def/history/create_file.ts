@@ -1,15 +1,15 @@
-import { ToolMap,Providers } from "../types.js";
+import { ToolMap,Providers } from "../../types.js";
 
-export const makeDir: ToolMap = {
+export const createFile: ToolMap = {
     [Providers.OpenAI]: {
         type: "function",
         function: {
-            name: "make_dir",
-            description: "Create a directory. Relative paths resolve from current working directory.",
+            name: "create_file",
+            description: "Create an empty file. Parent directories will be created if missing.",
             parameters: {
             type: "object",
             properties: {
-                path: { type: "string", description: "Directory path to create" }
+                path: { type: "string", description: "File path to create" }
             },
             required: ["path"]
             }
@@ -18,8 +18,8 @@ export const makeDir: ToolMap = {
   
     [Providers.Gemini]: {
         function_declarations: [{
-            name: "make_dir",
-            description: "Create a directory. Relative paths resolve from current working directory.",
+            name: "create_file",
+            description: "Create an empty file. Parent directories will be created if missing.",
             parameters: {
             type: "object",
             properties: {
@@ -31,12 +31,12 @@ export const makeDir: ToolMap = {
     },
   
     [Providers.Claude]: {
-        name: "make_dir",
-        description: "Create a directory. Relative paths resolve from current working directory.",
+        name: "create_file",
+        description: "Create an empty file. Parent directories will be created if missing.",
         input_schema: {
             type: "object",
             properties: {
-            path: { type: "string" }
+                path: { type: "string" }
             },
             required: ["path"]
         }
