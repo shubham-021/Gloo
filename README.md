@@ -1,57 +1,37 @@
 # Arka CLI
 
-Arka is a terminal-first AI assistant that routes every prompt to the most appropriate workflow—simple chat, web search, or a build-mode planner/executor loop—across OpenAI, Anthropic, or Google Gemini models. It runs entirely in your local shell, keeps per-provider credentials in Conf, and enforces CLI-only responses so generated answers stay in the terminal unless you explicitly request file edits.
+Arka is a conversational AI assistant for the terminal. Once installed globally from npm (`npm install -g @akra07/clai`), it exposes the `arka` command so you can configure multiple LLM providers, store credentials locally, and converse with a dedicated assistant directly from your shell.
 
-## Key Capabilities
-- **Provider agnostic**: Pick GPT-4/5, Claude 3.x, Gemini 1.5/2.5 (and custom IDs) via interactive menus.
-- **Local credential store**: `conf` keeps LLM and Tavily search keys per named config; no need to re-enter secrets.
-- **Router + DEC classifier**: Automatically separates web/info queries from project-aware build tasks.
-- **Planner/executor pipeline**: Planner emits capability-tagged steps; executor runs them sequentially with LangChain tools while obeying the “CLI output only” rule.
-- **Tool registry**: Centralized tool definitions (`src/tools.ts`) expose fs, shell, and web-search helpers to every model.
-- **Memory summaries**: Conversations are compressed after each run so future calls stay in context.
-- **Commander-based CLI**: Friendly `arka` binary with `configure`, `set-api`, `ask`, and other admin commands.
+## What It Uses
+- `commander` for the multi-command CLI interface.
+- `chalk` + `figlet` for colorful banners and readable terminal messages.
+- `ora` for request spinners and status feedback.
+- `conf` to persist provider/model selections plus API secrets on disk.
+- `inquirer` for interactive prompts when configuring or running the shell mode.
+- `langchain` as the orchestration layer, with provider clients `@langchain/openai`, `@langchain/anthropic`, and `@langchain/google-genai`.
+- `@langchain/tavily` to reach Tavily’s search API for retrieval-augmented responses.
+- `pdf-parse` to ingest document content inside the assistant’s toolchain.
+- `zod` for runtime validation of user-supplied configuration data.
 
-## Installation
-```bash
-npm install -g @arka07/clai
+## How It Works
+1. `arka configure -n <config_name>` walks you through selecting a provider and model, stores them, and marks the config as default.
+2. `arka set-api -n <config_name> --api <llm_key> --search <tavily_key>` saves the credentials for that config.
+3. `arka ask "your question"` loads the default config, initializes the `LLMCore`, and streams back the model’s answer, showing spinner status via `ora`.
+4. `arka switch -n <config_name>` lets you jump between saved setups, while `arka see-config` and `arka see-api` surface the stored values.
+5. `arka delete-config -n <config_name>` removes entries you no longer need.
+
+If you run `arka` without arguments, it launches an interactive shell that prints a Figlet banner, accepts natural-language questions, and keeps a persistent REPL until you type `q`/`quit` or press `Ctrl+C`.
+
+## Using It After `npm i -g`
+```sh
+npm install -g <package-name>
+arka configure -n my-setup
+arka set-api -n my-setup --api sk-... --search tavily-...
+arka ask "Who won the recent World Cup?"
 ```
-Requirements: Node.js 18+, a supported LLM provider key, and a Tavily API key for search-enabled answers.
 
-## Quick Start
-1. `arka configure -n first-run` – choose provider/model and set defaults.
-2. `arka set-api -n first-run --api <llm_key>` – store the model key securely.
-3. `arka set-api -n first-run --search <tavily_key>` – enable web/search tool calls.
-4. `arka ask "Summarize src/core.ts"` – the router will pick build mode, plan the steps, and stream the final summary directly to your terminal.
-
-All results stay in the CLI unless you explicitly request file creation or edits.
-
-## CLI Commands
-- `arka configure (-n <name>)`: Create/update configs; optional `-p` or `-m` flags limit prompts to provider/model reselection.
-- `arka set-api -n <name> (--api|--search <key>)`: Persist LLM or Tavily keys.
-- `arka delete-config -n <name>`: Remove a config and its secrets.
-- `arka see-config`: List saved configs via Inquirer and print the selected payload.
-- `arka see-api`: Display the default config’s stored keys (if present).
-- `arka switch -n <name>`: Mark a config as default for future runs.
-- `arka ask <query>`: Run the agent; automatically decides between simple prompt, search, or planner/executor build loop.
-
-## Planner / Executor Workflow
-1. **Router** (`src/prompt/router.ts`) tags build queries and appends `CLI_OUTPUT_ONLY_NO_UNREQUESTED_FILE_CREATION` so downstream prompts inherit the constraint.
-2. **Planner** (`src/prompt/planner.ts`) outputs numbered steps in the form `"<n>. Use Capability <1|2|3|4> to <action>."` and forbids Capability 1 (local context) from touching files unless you asked for the modification.
-3. **Executor** (`src/prompt/executer.ts`) executes each step sequentially, selecting tools that express the requested capability. It refuses to create files purely to show results and instead prints responses straight to the CLI.
-
-Capabilities:
-| ID | Purpose | Examples |
-|----|---------|----------|
-| 1  | Local context interaction | read/write project files, inspect code |
-| 2  | External knowledge access | Tavily web search, reference lookups |
-| 3  | System/utility operations | run scripts, installs, commands |
-| 4  | Pure reasoning/analysis | summarize, decide, draft final answer |
-
-## Search Workflow
-When the router picks the `search` tool, `src/core.ts` loads the `get_simple_prompt`, invokes the model with web-search enabled tools, and still enforces CLI-only outputs. Tavily results are summarized before returning to the user.
-
-## Memory & Persistence
-- `loadMemory` / `saveMemory` summarize transcripts after each interaction so future prompts include a compact context snippet.
-- Configs live under the Conf store keyed by the name you pass to CLI switches.
-
+Tips:
+- Always set both the model API key and the Tavily search key; the assistant won’t answer without them.
+- Use `arka configure -n my-setup -m` or `-p` to update just the model or provider of an existing config.
+- `arka` in interactive mode only handles Q&A; run configuration commands from your normal terminal session.
 
