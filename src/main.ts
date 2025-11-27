@@ -3,11 +3,11 @@
 import { Command } from "commander";
 import chalk from "chalk"; 
 import figlet from "figlet";
-import ora, { spinners } from "ora";
+import ora from "ora";
 import Conf from 'conf';
 import LLMCore from "./core.js";
-import { selectConfig, selectModel, selectProviderandModel } from "./inquirer.js";
-import { Config } from "./types.js";
+import { getInputPrompt_In, getListPrompt_In } from "./inquirer.js";
+import { Config, getModelsForProvider, Providers } from "./types.js";
 import inquirer from "inquirer";
 
 const program = new Command();
@@ -187,8 +187,13 @@ program
                 console.log(chalk.red.bold("This is only valid if you had any config before."));
                 process.exit(1);
             }
-            const {model} = await selectModel(_config.provider);
-            config.set(`${n}.model`,model);
+            const provider = _config.provider;
+            const availableModels = getModelsForProvider(provider);
+            const choice = await getListPrompt_In([...availableModels,"exit"],`Select a ${provider} model from the list: `);
+
+            if(choice === "exit") return;
+
+            config.set(`${n}.model`,choice);
             process.exit(1);
         }
 
@@ -199,7 +204,17 @@ program
                 console.log(chalk.red.bold("This is only valid if you had any config before."));
                 process.exit(1);
             }
-            const {model,provider} = await selectProviderandModel();
+
+            const providerList = [...Object.values(Providers),"exit"];
+            const provider = await getListPrompt_In(providerList,"Select a provider from the list: ");
+
+            if(provider === "exit") return;
+
+            const availableModels = getModelsForProvider(provider as Providers);
+            const model = await getListPrompt_In([...availableModels,"exit"],`Select a ${provider} model from the list: `);
+
+            if(model==="exit") return;
+
             config.set(`${n}.provider`,provider);
             config.set(`${n}.model`,model);
             process.exit(1);
@@ -215,7 +230,16 @@ program
             process.exit(1);
         }
 
-        const {provider , model} = await selectProviderandModel();
+        const providerList = [...Object.values(Providers),"exit"];
+        const provider = await getListPrompt_In(providerList,"Select a provider from the list: ");
+
+        if(provider === "exit") return;
+
+        const availableModels = getModelsForProvider(provider as Providers);
+        const model = await getListPrompt_In([...availableModels,"exit"],`Select a ${provider} model from the list: `);
+
+        if(model==="exit") return;
+
         config.set(n,{provider,model,api:"",search_api:""})
         config.set("default",n);
         console.log(chalk.greenBright(`Selected: ${provider} - ${model} \n`));
@@ -228,7 +252,7 @@ program
         const all_config = config.store;
         const config_names = Object.keys(all_config).filter((name) => name !== "default");
         config_names.push("exit");
-        const config_s = await selectConfig(config_names);
+        const config_s = await getListPrompt_In(config_names,"Select from the list: ");
 
         if(config_s === "exit") process.exit(1);
 
@@ -308,13 +332,8 @@ async function interactiveShell() {
 
     while(true){
         try{
-            const answer = await inquirer.prompt([{
-                type: 'input',
-                name: 'command',
-                message: chalk.cyan.bold('arka > ')
-            }]);
-
-            const input = answer.command.trim();
+            const command = await getInputPrompt_In();
+            const input = command.trim();
 
             if(input.toLowerCase() === 'q' || input.toLowerCase() === 'quit'){
                 console.log(chalk.green("Exiting interactive mode. GoodBye!"));
