@@ -6,10 +6,10 @@ import { Message_memory } from "../types";
 const MEM_DIR = path.join(os.homedir(), ".arkacli");
 
 // long term memory
-const LTM_FILE = path.join(MEM_DIR, 'akra.md');
+const LTM_FILE = path.join(MEM_DIR, 'preferences.json');
 
 // short term memory
-const STM_FILE = path.join(MEM_DIR, 'current.md');
+const STM_FILE = path.join(MEM_DIR, 'current.json');
 
 
 export function load_LTMemory(): Array<string> {

@@ -97,7 +97,11 @@ class LLMCore {
 
         const res = await model_with_structured_output.invoke(messages);
 
-        if (res.found && res.preference) saveLTMemory(res.preference);
+        // console.log(JSON.stringify(res));
+
+        if (res.found && res.preference.trim().length > 0) {
+            saveLTMemory(res.preference);
+        }
     }
 
     async router(query: string): Promise<string> {
@@ -107,7 +111,12 @@ class LLMCore {
             { role: 'user', content: query }
         ];
 
-        this.save_LTMemory(query);
+        try {
+            await this.save_LTMemory(query);
+        } catch (error) {
+            console.log((error as Error).message);
+            return 'Unable to proceed\n';
+        }
 
         const messages: Message[] = [
             new SystemMessage(`

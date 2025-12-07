@@ -9,8 +9,8 @@ export const DEC_PROMPT_RESPONSE = z.object({
 })
 
 export const LTMESSAGETYPE = z.object({
-    found: z.boolean().describe('Did describe any type of preference in his query?'),
-    preference: z.string().describe('User preference extracted out of this query').optional()
+    found: z.boolean().describe('Did user describe any type of preference in their query?'),
+    preference: z.string().describe('User preference extracted from this query. Use empty string if no preference found.')
 });
 
 export type Message_memory = { role: 'user' | 'assistant' | 'tool', content: string };
