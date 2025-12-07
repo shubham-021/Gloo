@@ -8,6 +8,13 @@ export const DEC_PROMPT_RESPONSE = z.object({
     build: z.boolean().describe("Whether the query is about building something or not")
 })
 
+export const LTMESSAGETYPE = z.object({
+    found: z.boolean().describe('Did describe any type of preference in his query?'),
+    preference: z.string().describe('User preference extracted out of this query').optional()
+});
+
+export type Message_memory = { role: 'user' | 'assistant' | 'tool', content: string };
+
 export type ToolsTypes = Array<OpenAITool | ClaudeTool | GeminiTool>;
 
 export type ChatModels = ChatOpenAI | ChatGoogleGenerativeAI | ChatAnthropic;
@@ -118,7 +125,7 @@ export const MessagesMappedToTools = new Map<string, string>([
     ["delete_file_dir", "Deleting"],
     ["move_file", "Moving the file"],
     ["http_request", "Making a http request to"],
-    ["search_in_files", "Searching in the file"],
-    ["search", "A simple web search will do for this query"],
+    ["search_in_files", "Analyzing"],
+    ["search", "Searching web"],
     ["build", "Preparing to build for user request"]
 ]);

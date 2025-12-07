@@ -1,20 +1,21 @@
 import { HumanMessage, SystemMessage, AIMessage } from "langchain";
-import { Providers, ProviderMap, Message, ChatModels, ToolsTypes, MessagesMappedToTools } from "./types.js";
+import { Providers, ProviderMap, Message, ChatModels, ToolsTypes, MessagesMappedToTools, Message_memory, LTMESSAGETYPE } from "./types.js";
 import { Tools } from "./tools.js";
 import { get_simple_prompt } from "./prompt/simple.js"
 import { get_planner_prompt } from "./prompt/planner.js"
-import { loadMemory, saveMemory } from "./memory/memory.js";
+import { load_LTMemory, load_STMemory, saveLTMemory, saveSTMemory } from "./memory/memory.js";
 import { get_executer_prompt } from "./prompt/executer.js";
 import { PROMPT as ROUTER_PROMPT } from "./prompt/router.js";
 import { router_tool_def } from "./tools-def/router_tools/def.js";
 import chalk from "chalk";
 import ora from "ora";
+import { LT_PROMPT } from "./prompt/memory.js";
 
 // dotenv.config();
 
 class LLMCore {
     private plannerLLM: ChatModels;
-    private summarizerLLM: ChatModels;
+    private LTMemory: ChatModels;
     private routerLLM: ChatModels;
     private searchLLM: ChatModels;
     private buildLLM: ChatModels;
@@ -34,10 +35,13 @@ class LLMCore {
         this.searchLLM = new LLM({ model, apiKey: api });
         this.buildLLM = new LLM({ model, apiKey: api });
         this.plannerLLM = new LLM({ model, apiKey: api });
-        this.summarizerLLM = new LLM({ model, apiKey: api });
+        this.LTMemory = new LLM({ model, apiKey: api });
     }
 
     async call_tool(res: any, messages: Message[], which: ("build" | "search")) {
+        const memory: Message_memory[] = [
+            { role: 'assistant', content: JSON.stringify(res.tool_calls) }
+        ];
         messages.push(new AIMessage({ content: res.content, tool_calls: res.tool_calls }));
         // console.log("Tools called: ",JSON.stringify(res.tool_calls));
         for (const toolCall of res.tool_calls) {
@@ -56,6 +60,8 @@ class LLMCore {
                 toolResult = `TOOL ERROR: ${(err as Error).message}`;
             }
 
+            memory.push({ role: 'tool', content: toolResult });
+
             messages.push({
                 role: "tool",
                 name: tool_name,
@@ -65,38 +71,54 @@ class LLMCore {
             // console.log("Content: ",JSON.stringify(toolResult.results ?? toolResult.result ?? null));
         }
 
+        saveSTMemory(memory);
+
+        messages.push(new AIMessage(`
+            <UpdatedPreviousConversations>
+                ${load_STMemory()}
+            </UpdatedPreviousConversations>
+        `))
+
         // console.log("Messages: ",JSON.stringify(messages));
         let newRes: any;
         if (which === "build") newRes = await this.buildLLM.invoke(messages, { tools: this.toolDefinition, tool_choice: "auto" });
-        else if (which === "search") newRes = await this.buildLLM.invoke(messages, { tools: this.toolDefinition, tool_choice: "auto" });
+        else if (which === "search") newRes = await this.searchLLM.invoke(messages, { tools: this.toolDefinition, tool_choice: "auto" });
         // messages.push(new AIMessage({content : res.content , tool_calls: res.tool_calls}));
         return newRes;
     }
 
-    async summarize(res: AIMessage, memory: any, ask: string) {
-        const compressionPrompt = [
-            new SystemMessage("Summarize the conversation below so future messages retain necessary context. Be concise."),
-            new HumanMessage(`
-                Previous summary:
-                ${memory.summary}
-                
-                Latest user message:
-                ${ask}
-                
-                Latest assistant message:
-                ${res.content}
-            `)
+    async save_LTMemory(user_query: string) {
+        const messages = [
+            new SystemMessage(LT_PROMPT),
+            new HumanMessage(user_query)
         ];
 
-        const compression = await this.summarizerLLM.invoke(compressionPrompt);
-        saveMemory(compression.text);
+        const model_with_structured_output = this.LTMemory.withStructuredOutput(LTMESSAGETYPE)
+
+        const res = await model_with_structured_output.invoke(messages);
+
+        if (res.found && res.preference) saveLTMemory(res.preference);
     }
 
     async router(query: string): Promise<string> {
         const PROMPT = ROUTER_PROMPT;
         const tools = new Map<string, any>([["search", this.search.bind(this)], ["build", this.build.bind(this)]]);
+        let memory: Message_memory[] = [
+            { role: 'user', content: query }
+        ];
+
+        this.save_LTMemory(query);
+
         const messages: Message[] = [
-            new SystemMessage(PROMPT),
+            new SystemMessage(`
+                <PreviousConverstations>
+                    ${memory}
+                </PreviousConverstations>
+
+                <Intructions>
+                    ${PROMPT}
+                </Intructions>
+            `),
             new HumanMessage(query)
         ];
         // console.log(JSON.stringify(tool_def),"\n",JSON.stringify(messages));
@@ -106,6 +128,7 @@ class LLMCore {
 
         if (res.tool_calls && res.tool_calls.length > 0) {
             // console.log("Tool call: ",JSON.stringify(res.tool_calls));
+            memory.push({ role: 'assistant', content: JSON.stringify(res.tool_calls) });
             const toolCall = res.tool_calls[0];
 
             const tool_name = toolCall.name;
@@ -126,14 +149,19 @@ class LLMCore {
             try {
                 spinner_think.stop();
                 // console.log("here trycatch\n");
+                saveSTMemory(memory);
                 toolResult = await tool(tool_arg, currentDate);
                 // console.log(JSON.stringify(toolResult));
             } catch (err) {
                 spinner_think.stop();
-                console.log(`TOOL ERROR: ${(err as Error).message}\n`);
-                toolResult = `TOOL ERROR: ${(err as Error).message}`;
+                const error_msg = (err as Error).message;
+                memory.push({ role: 'tool', content: `Error: ${error_msg}` });
+                saveSTMemory(memory);
+                console.log(`TOOL ERROR: ${error_msg}\n`);
+                toolResult = `TOOL ERROR: ${error_msg}`;
             }
 
+            // memory.push({ role: 'tool', content: String(toolResult) });
             messages.push({
                 role: "tool",
                 name: tool_name,
@@ -143,11 +171,12 @@ class LLMCore {
 
         } else {
             spinner_think.stop();
-            messages.push(new AIMessage(res.content));
         }
 
-        const spinner_generate = ora({ spinner: 'mindblown', text: 'Generating response' }).start();
+        const spinner_generate = ora({ spinner: 'circle', text: 'Generating response' }).start();
         res = await this.routerLLM.invoke(messages);
+        memory = [{ role: 'assistant', content: res.text }];
+        saveSTMemory(memory);
         spinner_generate.stop();
         return res.text;
     }
@@ -156,11 +185,30 @@ class LLMCore {
         const routerNote = "CLI_OUTPUT_ONLY_NO_UNREQUESTED_FILE_CREATION";
         const ask = `${toolArgs.query}\n\n${routerNote}`;
 
-        const memory = loadMemory();
+        // memory
+        const short_memory = load_STMemory();
+        const long_memory = load_LTMemory();
+
+        const memory: Message_memory[] = [
+            { role: 'user', content: ask }
+        ];
+
+
         const PROMPT = get_simple_prompt(currentDate);
         const messages: Message[] = [
-            new SystemMessage(`${PROMPT}
-                Memory Summary of Previous Conversation: ${memory.summary || "(empty)"}`),
+            new SystemMessage(`
+                <UserPreferences>
+                    ${long_memory}
+                </UserPreferences>
+
+                <PreviousConverstaions>
+                    Previous conversations: ${short_memory}
+                </PreviousConverstaions>
+
+                <Instruction>
+                    ${PROMPT}
+                </Instruction>
+            `),
             new HumanMessage(ask)
         ];
 
@@ -172,16 +220,25 @@ class LLMCore {
             messages.push(new AIMessage(res.text));
         }
 
-        this.summarize(res, memory, ask);
+        saveSTMemory([
+            ...memory,
+            { role: 'assistant', content: res.text }
+        ]);
         return res.text;
     }
 
     async build(toolArgs: { query: string }, currentDate: string): Promise<string> {
         // console.log("here inside build\n");
-        const memory = loadMemory();
         const ask = toolArgs.query;
         // console.log(query);
         // console.log("\n",ask);
+
+        const short_memory = load_STMemory();
+        const long_memory = load_LTMemory();
+
+        const memory: Message_memory[] = [
+            { role: 'user', content: ask }
+        ];
 
         const PROMPT = get_planner_prompt(currentDate);
         // console.log("\n",currentDate);
@@ -200,8 +257,19 @@ class LLMCore {
         const PROMPT_EXECUTOR = get_executer_prompt();
 
         const messages: Message[] = [
-            new SystemMessage(`${PROMPT_EXECUTOR}
-                Memory Summary of Previous Conversation: ${memory.summary || "(empty)"}`),
+            new SystemMessage(`
+                <UserPreferences>
+                    ${long_memory}
+                </UserPreferences>
+
+                <PreviousConversations>
+                    ${short_memory}
+                </PreviousConversations>
+
+                <Instructions>
+                    ${PROMPT_EXECUTOR}
+                </Instructions>
+            `),
             new HumanMessage(`Execute this plan:\n\n${PLANNER_RES}\n\nOriginal user request: ${ask}`)
         ]
 
@@ -225,7 +293,8 @@ class LLMCore {
 
         messages.push(new AIMessage({ content: res.content, tool_calls: res.tool_calls }));
 
-        this.summarize(res, memory, ask);
+        memory.push({ role: 'assistant', content: res.text });
+        saveSTMemory(memory);
         return res.text;
     }
 }
