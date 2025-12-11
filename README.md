@@ -1,37 +1,84 @@
 # Arka CLI
 
-Arka is a conversational AI assistant for the terminal. Once installed globally from npm (`npm install -g @akra07/clai`), it exposes the `arka` command so you can configure multiple LLM providers, store credentials locally, and converse with a dedicated assistant directly from your shell.
+A conversational AI assistant for the terminal. Configure multiple LLM providers, store credentials locally, and chat with an AI assistant directly from your shell.
 
-## What It Uses
-- `commander` for the multi-command CLI interface.
-- `chalk` + `figlet` for colorful banners and readable terminal messages.
-- `ora` for request spinners and status feedback.
-- `conf` to persist provider/model selections plus API secrets on disk.
-- `inquirer` for interactive prompts when configuring or running the shell mode.
-- `langchain` as the orchestration layer, with provider clients `@langchain/openai`, `@langchain/anthropic`, and `@langchain/google-genai`.
-- `@langchain/tavily` to reach Tavily’s search API for retrieval-augmented responses.
-- `pdf-parse` to ingest document content inside the assistant’s toolchain.
-- `zod` for runtime validation of user-supplied configuration data.
+## Supported Providers
 
-## How It Works
-1. `arka configure -n <config_name>` walks you through selecting a provider and model, stores them, and marks the config as default.
-2. `arka set-api -n <config_name> --api <llm_key> --search <tavily_key>` saves the credentials for that config.
-3. `arka ask "your question"` loads the default config, initializes the `LLMCore`, and streams back the model’s answer, showing spinner status via `ora`.
-4. `arka switch -n <config_name>` lets you jump between saved setups, while `arka see-config` and `arka see-api` surface the stored values.
-5. `arka delete-config -n <config_name>` removes entries you no longer need.
+1. OpenAI (GPT 4, GPT 4o mini, GPT 4 Turbo)
+2. Anthropic (Claude 3 Opus, Sonnet, Haiku)
+3. Google Gemini (Gemini 1.5 Pro, Flash, 2.5 Pro, Flash)
 
-If you run `arka` without arguments, it launches an interactive shell that prints a Figlet banner, accepts natural-language questions, and keeps a persistent REPL until you type `q`/`quit` or press `Ctrl+C`.
+## Prerequisites
 
-## Using It After `npm i -g`
+1. Node.js 18 or higher
+2. pnpm package manager
+3. API key from your chosen provider
+4. Tavily API key for web search
+
+## Installation
+
+### From npm (Global)
+
 ```sh
-npm install -g <package-name>
-arka configure -n my-setup
-arka set-api -n my-setup --api sk-... --search tavily-...
-arka ask "Who won the recent World Cup?"
+npm install -g @arka07/clai
 ```
 
-Tips:
-- Always set both the model API key and the Tavily search key; the assistant won’t answer without them.
-- Use `arka configure -n my-setup -m` or `-p` to update just the model or provider of an existing config.
-- `arka` in interactive mode only handles Q&A; run configuration commands from your normal terminal session.
+### From Source
 
+```sh
+git clone https://github.com/shubham-021/cli-with-ai.git
+cd cli-with-ai
+pnpm install
+pnpm exec tsc
+node dist/main.js
+```
+
+## Setup
+
+1. Configure a provider and model:
+```sh
+arka configure -n myconfig
+```
+
+2. Set your API keys:
+```sh
+arka set-api -n myconfig --api YOUR_PROVIDER_API_KEY --search YOUR_TAVILY_KEY
+```
+
+3. Start asking questions:
+```sh
+arka ask "What is the capital of France?"
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `arka configure -n <name>` | Create a new configuration with provider and model selection |
+| `arka set-api -n <name> --api <key> --search <key>` | Set API keys for a configuration |
+| `arka ask <question>` | Ask a question using the default configuration |
+| `arka switch -n <name>` | Switch the default configuration |
+| `arka see-config` | View saved configurations |
+| `arka see-api` | View current API key status |
+| `arka delete-config -n <name>` | Delete a configuration |
+| `arka` | Launch interactive shell mode |
+
+## Interactive Mode
+
+Run `arka` without arguments to enter interactive mode. Type your questions and press Enter. Type `q` or `quit` to exit.
+
+## Project Structure
+
+```
+src/
+  main.ts           Entry point and CLI commands
+  core.ts           LLM initialization
+  agent/            ReAct agent implementation
+  providers/        Direct API clients for each provider
+  tools/            Tool definitions and registry
+  memory/           Conversation memory management
+```
+
+## License
+
+ISC
