@@ -1,4 +1,4 @@
-## LLM hallucinates over searching 
+## LLM HALLUCINAION OVER SEARCHING
     - Ex. Searching for : Who won the series between ind and sa ?
     - Expected : Searching for ind vs sa in 2025
     - Actual: Searching for ind vs sa in 2023
@@ -21,3 +21,9 @@
     - TREE SITTER : 
         - Tree-sitter is a parser generator that supports 40+ languages with the same API.
         - Supported languages: JavaScript, TypeScript, Python, Go, Rust, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, Elixir, Haskell, and more
+
+## REFACTOR (IN PROGRESS)
+    - Stronger foundation for tool registering 
+    - Use ReAct arch instead for multi model pipeline
+    - current prompt is vague , lots of other issues
+    - May fix hallucination

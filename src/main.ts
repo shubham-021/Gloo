@@ -127,13 +127,13 @@ program
 
             try {
                 const llm = new LLMCore(set_config.provider, set_config.model, api, search_api);
-                const res = await llm.router(query);
                 spinner.stop();
-                console.log(chalk.cyan.bold("\n🤖: ", res));
-                // for await (const chunk of stream) {
-                //     process.stdout.write(chunk);
-                // }
-                console.log("\n");
+                // console.log(chalk.cyan.bold("\n🤖: ", res));
+                process.stdout.write(chalk.cyan.bold("\n🤖: "));
+                for await (const chunk of llm.chat(query)) {
+                    process.stdout.write(chalk.cyan(chunk));
+                }
+                process.stdout.write("\n");
             } catch (error) {
                 spinner.fail('Failed to get response');
                 console.error(chalk.red((error as Error).message));
@@ -319,8 +319,13 @@ async function interactiveShell() {
             try {
                 const llm = new LLMCore(set_config.provider, set_config.model, api, search_api);
                 spinner.stop();
-                const res = await llm.router(query);
-                console.log(chalk.cyan.bold("\n🤖: ", res));
+                // const res = await llm.router(query);
+                process.stdout.write('🤖: ');
+                for await (const chunk of llm.chat(query)) {
+                    process.stdout.write(chunk);
+                };
+                process.stdout.write('\n');
+                // console.log(chalk.cyan.bold("\n🤖: ", res));
                 // for await (const chunk of stream) {
                 //     process.stdout.write(chunk);
                 // }
