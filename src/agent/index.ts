@@ -23,7 +23,6 @@ export class ReActAgent {
     }
 
     async *run(query: string): AsyncGenerator<string> {
-        // Build context for system prompt
         const systemPrompt = getSystemPrompt({
             cwd: process.cwd(),
             date: new Date().toLocaleDateString(),
@@ -36,17 +35,13 @@ export class ReActAgent {
         ];
         const tools = this.toolRegistry.getForProvider(this.provider);
         let stepCount = 0;
-        // The ReAct loop (like AI SDK's do-while)
         while (stepCount < MAX_STEPS) {
             stepCount++;
-            // Call LLM with tools
             const response = await this.llm.invoke(messages, {
                 tools,
                 tool_choice: 'auto'
             });
-            // No tool calls = we're done, stream the response
             if (!response.tool_calls || response.tool_calls.length === 0) {
-                // Stream the text
                 const stream = await this.llm.stream(messages);
                 let fullText = '';
                 for await (const chunk of stream) {
@@ -56,19 +51,17 @@ export class ReActAgent {
                     }
                 }
 
-                // Save to memory
                 saveSTMemory([
                     { role: 'user', content: query },
                     { role: 'assistant', content: fullText }
                 ]);
                 return;
             }
-            // Execute tool calls
+
             messages.push(new AIMessage(response));
             for (const toolCall of response.tool_calls) {
                 const tool = this.toolRegistry.get(toolCall.name);
 
-                // Check if approval needed
                 if (tool?.needsApproval) {
                     const shouldApprove = typeof tool.needsApproval === 'function'
                         ? tool.needsApproval(toolCall.args)
@@ -90,7 +83,7 @@ export class ReActAgent {
                         }
                     }
                 }
-                // Execute the tool
+
                 let result: string;
                 try {
                     result = await this.toolRegistry.execute(
@@ -108,8 +101,6 @@ export class ReActAgent {
                     content: result
                 });
             }
-
-            // Loop continues...
         }
         yield '\n[Stopped after maximum steps reached]';
     }
