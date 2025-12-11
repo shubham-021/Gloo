@@ -79,6 +79,3 @@ src/
   memory/           Conversation memory management
 ```
 
-## License
-
-ISC
