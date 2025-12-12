@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import { Message_memory } from "../types.js";
 
-const MEM_DIR = path.join(os.homedir(), ".arkacli");
+const MEM_DIR = path.join(os.homedir(), ".gloo");
 
 // long term memory
 const LTM_FILE = path.join(MEM_DIR, 'preferences.json');

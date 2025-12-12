@@ -55,6 +55,9 @@ export class AnthropicProvider implements ChatProvider {
 
         if (!response.ok) {
             const error = await response.text();
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('\n\nDEBUG ERROR [Anthropic invoke]:', error);
+            }
             throw new Error(`Anthropic API error: ${response.status} - ${error}`);
         }
 
@@ -67,10 +70,14 @@ export class AnthropicProvider implements ChatProvider {
             if (block.type === 'text') {
                 content += block.text;
             } else if (block.type === 'tool_use') {
+                const args = block.input ?? {};
+                if (process.env.GLOO_DEBUG === 'true' && !block.input) {
+                    console.error('\n\nDEBUG: Anthropic tool call missing input:', block.name);
+                }
                 tool_calls.push({
                     id: block.id,
                     name: block.name,
-                    args: block.input
+                    args
                 });
             }
         }
@@ -89,7 +96,19 @@ export class AnthropicProvider implements ChatProvider {
             model: this.model,
             max_tokens: 4096,
             stream: true,
-            messages: nonSystemMessages.map(m => ({ role: m.role, content: m.content }))
+            messages: nonSystemMessages.map(m => {
+                if (m.role === 'tool') {
+                    return {
+                        role: 'user',
+                        content: [{
+                            type: 'tool_result',
+                            tool_use_id: m.tool_call_id,
+                            content: m.content
+                        }]
+                    };
+                }
+                return { role: m.role, content: m.content };
+            })
         };
 
         if (systemMessage) {
@@ -107,6 +126,9 @@ export class AnthropicProvider implements ChatProvider {
         });
 
         if (!response.ok) {
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('\n\nDEBUG ERROR [Anthropic stream]:', response.status);
+            }
             throw new Error(`Anthropic API error: ${response.status}`);
         }
 

@@ -18,7 +18,7 @@ const program = new Command();
 const config = new Conf({ projectName: 'gloo-cli' });
 
 program
-    .version("0.0.1")
+    .version("1.0.6")
     .description("Your ai assistant in your cli")
     .addHelpText('after', `
         Getting Started:
@@ -28,10 +28,10 @@ program
           4. Start asking questions: arka ask "your question"
         
         Example:
-          $ arka configure
-          $ arka set-api --api <api_key>
-          $ arka set-api --search <api_key>
-          $ arka ask Who won the recent fifa worldcup and why is ronaldo crying
+          $ gloo configure
+          $ gloo set-api --api <api_key>
+          $ gloo set-api --search <api_key>
+          $ gloo ask Who won the recent fifa worldcup and why is ronaldo crying
     `);
 
 program
@@ -139,6 +139,10 @@ program
                 }
                 process.stdout.write("\n");
             } catch (error) {
+                if (process.env.GLOO_DEBUG === 'true') {
+                    console.error('\n\nDEBUG ERROR [ask]:', error);
+                    console.error('Stack:', (error as Error).stack);
+                }
                 spinner.fail('Failed to get response');
                 console.error(chalk.red((error as Error).message));
                 process.exit(1);
@@ -275,6 +279,14 @@ program
         process.exit(1);
     })
 
+program
+    .command('debug')
+    .description('Launch interactive mode with debug output')
+    .action(async () => {
+        process.env.GLOO_DEBUG = 'true';
+        render(React.createElement(App));
+    });
+
 // process.argv returns an array containing all the command-line arguments passed when the Node.js process was launched.
 // The array always has at least two elements by default.
 // [
@@ -341,6 +353,10 @@ async function interactiveShell() {
                 // }
                 console.log("\n");
             } catch (error) {
+                if (process.env.GLOO_DEBUG === 'true') {
+                    console.error('DEBUG ERROR [interactive]:', error);
+                    console.error('Stack:', (error as Error).stack);
+                }
                 spinner.fail('Failed to get response');
                 console.error(chalk.red((error as Error).message));
             }
@@ -376,6 +392,10 @@ async function interactiveShell() {
                 await handleAsk(input);
             }
         } catch (error) {
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('DEBUG ERROR [shell]:', error);
+                console.error('Stack:', (error as Error).stack);
+            }
             if ((error as any).isTtyError) {
                 console.error(chalk.red("Prompt error: Cannot run interactive shell in this terminal environment."));
             } else {

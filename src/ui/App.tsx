@@ -83,6 +83,10 @@ export function App() {
             setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
             setStreamingText('');
         } catch (err) {
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('DEBUG ERROR:', err);
+                console.error('Stack:', (err as Error).stack);
+            }
             setError((err as Error).message);
         } finally {
             setIsLoading(false);
@@ -102,14 +106,16 @@ export function App() {
                     <Message role='assistant' content={streamingText} />
                 )}
 
-                {isLoading && !streamingText && (
+                {isLoading && !streamingText && !currentTool && (
                     <Box paddingLeft={1} marginY={1}>
                         <Spinner message='Thinking ...' />
                     </Box>
                 )}
 
                 {currentTool && (
-                    <ToolActivity message={currentTool} isActive={true} />
+                    <Box paddingLeft={1} marginY={1}>
+                        <ToolActivity message={currentTool} isActive={true} />
+                    </Box>
                 )}
 
                 {error && (

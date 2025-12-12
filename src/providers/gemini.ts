@@ -56,11 +56,7 @@ export class GeminiProvider implements ChatProvider {
 
         if (options?.tools?.length) {
             body.tools = [{
-                functionDeclarations: options.tools.map(t => ({
-                    name: t.function?.name ?? t.name,
-                    description: t.function?.description ?? t.description,
-                    parameters: t.function?.parameters ?? t.input_schema ?? t.parameters
-                }))
+                functionDeclarations: options.tools
             }];
         }
 
@@ -74,6 +70,9 @@ export class GeminiProvider implements ChatProvider {
 
         if (!response.ok) {
             const error = await response.text();
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('\n\nDEBUG ERROR [Gemini invoke]:', error);
+            }
             throw new Error(`Gemini API error: ${response.status} - ${error}`);
         }
 
@@ -88,10 +87,14 @@ export class GeminiProvider implements ChatProvider {
             if (part.text) {
                 content += part.text;
             } else if (part.functionCall) {
+                const args = part.functionCall.args ?? {};
+                if (process.env.GLOO_DEBUG === 'true' && !part.functionCall.args) {
+                    console.error('\n\nDEBUG: Gemini tool call missing args:', part.functionCall.name);
+                }
                 tool_calls.push({
                     id: `call_${Date.now()}_${Math.random().toString(36).slice(2)}`,
                     name: part.functionCall.name,
-                    args: part.functionCall.args ?? {}
+                    args
                 });
             }
         }
@@ -116,6 +119,9 @@ export class GeminiProvider implements ChatProvider {
         });
 
         if (!response.ok) {
+            if (process.env.GLOO_DEBUG === 'true') {
+                console.error('\n\nDEBUG ERROR [Gemini stream]:', response.status);
+            }
             throw new Error(`Gemini API error: ${response.status}`);
         }
 

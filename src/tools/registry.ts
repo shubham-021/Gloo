@@ -1,6 +1,6 @@
 import { ToolDefinition, ToolSet, ToolContext } from './types.js';
 import { Providers } from '../providers/index.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import * as z from 'zod';
 
 export class ToolRegistry {
     private tools: ToolSet = {};
@@ -19,13 +19,13 @@ export class ToolRegistry {
 
     getForProvider(provider: Providers): any[] {
         return Object.values(this.tools).map(tool => {
-            const fullSchema = zodToJsonSchema(tool.inputSchema as any);
+            const jsonSchema = z.toJSONSchema(tool.inputSchema as any);
 
-            const jsonSchema = {
-                type: 'object',
-                properties: (fullSchema as any).properties ?? {},
-                required: (fullSchema as any).required ?? []
-            };
+            // Debug: Log raw zod schema
+            if (process.env.GLOO_DEBUG === 'true' && tool.name === 'web_search') {
+                console.log('\n\nRAW ZOD SCHEMA for web_search:');
+                console.log(JSON.stringify(jsonSchema, null, 2));
+            }
 
             switch (provider) {
                 case Providers.OpenAI:
@@ -39,11 +39,9 @@ export class ToolRegistry {
                     };
                 case Providers.Gemini:
                     return {
-                        function_declarations: [{
-                            name: tool.name,
-                            description: tool.description,
-                            parameters: jsonSchema
-                        }]
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: jsonSchema
                     };
                 case Providers.Claude:
                     return {

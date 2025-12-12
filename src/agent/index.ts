@@ -122,6 +122,12 @@ export class Agent {
                 const argPreview = getArgPreview(toolCall.name, toolCall.args);
                 yield { type: 'tool', name: toolCall.name, message: `${toolMessage}${argPreview}` };
 
+                // Debug: Log tool call
+                if (process.env.GLOO_DEBUG === 'true') {
+                    console.log(`\n\nTOOL CALL: ${toolCall.name}`);
+                    console.log(`Args: ${JSON.stringify(toolCall.args, null, 2).split('\n')}`);
+                }
+
                 let result: string;
                 try {
                     result = await this.toolRegistry.execute(
@@ -129,14 +135,32 @@ export class Agent {
                         toolCall.args,
                         { cwd: process.cwd() }
                     );
+
+                    // Debug: Log tool result
+                    if (process.env.GLOO_DEBUG === 'true') {
+                        const maxLen = 500;
+                        const truncated = result.length > maxLen
+                            ? result.slice(0, maxLen) + `\n... [truncated ${result.length - maxLen} chars]`
+                            : result;
+                        console.log(`\n\nTOOL RESULT: ${toolCall.name}`);
+                        console.log(`Output (${result.length} chars):`);
+                        console.log(`${truncated.split('\n')}`);
+                    }
                 } catch (error) {
+                    if (process.env.GLOO_DEBUG === 'true') {
+                        console.log(`\n\nTOOL ERROR: ${toolCall.name}`);
+                        console.log(`${(error as Error).message}`);
+                        console.log(`Stack: ${(error as Error).stack?.split('\n').slice(0, 3)}`);
+                    }
                     result = `Error: ${(error as Error).message}`;
                 }
                 messages.push({
                     role: 'tool',
                     tool_call_id: toolCall.id,
                     name: toolCall.name,
-                    content: result
+                    content: toolCall.name === 'web_search'
+                        ? (typeof result === 'string' ? result : JSON.stringify(result))
+                        : result
                 });
             }
         }
