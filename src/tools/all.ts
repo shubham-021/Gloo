@@ -13,7 +13,8 @@ import {
     executeCommandTool,
     parsePdfTool,
     searchInFilesTool,
-    httpRequestTool
+    httpRequestTool,
+    parseCodeTool
 } from './definitions.js';
 
 export function allTools(tavilyApiKey: string): ToolDefinition[] {
@@ -31,6 +32,7 @@ export function allTools(tavilyApiKey: string): ToolDefinition[] {
         executeCommandTool,
         parsePdfTool,
         searchInFilesTool,
-        httpRequestTool
+        httpRequestTool,
+        parseCodeTool
     ];
 }

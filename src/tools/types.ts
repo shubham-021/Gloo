@@ -3,7 +3,7 @@ import { z } from 'zod';
 export interface ToolDefinition<TInput = any, TOutput = any> {
     name: string;
     description: string;
-    category: 'filesystem' | 'web' | 'system' | 'search';
+    category: 'filesystem' | 'web' | 'system' | 'search' | 'analysis';
 
     inputSchema: z.ZodType<TInput>;
 

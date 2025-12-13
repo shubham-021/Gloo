@@ -1,6 +1,6 @@
 {
   "name": "@arka07/gloo",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Your own assistant in your cli",
   "bin": {
     "gloo": "dist/main.js"
@@ -10,7 +10,9 @@
     "dist"
   ],
   "scripts": {
-    "start": "pnpm ts-node ./src/main.ts"
+    "start": "pnpm ts-node ./src/main.ts",
+    "build": "tsc && cp -r src/tools/grammars dist/tools/",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [],
   "author": "",
@@ -30,8 +32,8 @@
     "ora": "^9.0.0",
     "pdf-parse": "^2.4.5",
     "react": "^19.2.3",
-    "zod": "^4.1.12",
-    "zod-to-json-schema": "^3.25.0"
+    "web-tree-sitter": "^0.25.10",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.9",

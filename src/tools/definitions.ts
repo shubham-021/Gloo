@@ -6,6 +6,9 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PDFParse } from 'pdf-parse';
 import { glob } from 'glob';
+import { Parser, Node, Language } from 'web-tree-sitter';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const execAsync = promisify(exec);
 
@@ -345,5 +348,104 @@ export const httpRequestTool = defineTool({
 
         const data = await response.json();
         return JSON.stringify(data, null, 2);
+    }
+});
+
+// 15. parse_code
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const GRAMMAR_MAP: Record<string, string> = {
+    '.js': 'tree-sitter-javascript.wasm',
+    '.jsx': 'tree-sitter-javascript.wasm',
+    '.ts': 'tree-sitter-typescript.wasm',
+    '.tsx': 'tree-sitter-typescript.wasm',
+    '.py': 'tree-sitter-python.wasm',
+}
+
+
+const NODE_TYPES = {
+    functions: ['function_declaration', 'function_definition', 'method_definition', 'arrow_function', 'function_item'],
+    classes: ['class_declaration', 'class_definition', 'class'],
+    imports: ['import_statement', 'import_from_statement', 'import_declaration'],
+};
+
+function extractNodes(node: Node, types: string[]): any[] {
+    const results: any[] = [];
+
+    function traverse(n: Node) {
+        if (types.includes(n.type)) {
+            const nameNode = n.childForFieldName('name');
+            results.push({
+                type: n.type,
+                name: nameNode?.text ?? n.text.slice(0, 60).replace(/\n/g, ' '),
+                startLine: n.startPosition.row + 1,
+                endLine: n.endPosition.row + 1,
+            });
+        }
+        for (let i = 0; i < n.childCount; i++) {
+            traverse(n.child(i)!);
+        }
+    }
+
+    traverse(node);
+    return results;
+}
+
+let parserInitialized = false;
+
+export const parseCodeTool = defineTool({
+    name: 'parse_code',
+    description: 'Parse source code and extract structure (functions, classes, imports). Supports: JS, TS, Python.',
+    category: 'analysis',
+    inputSchema: z.object({
+        path: z.string().describe('Path to the source code file'),
+        extract: z.array(z.enum(['functions', 'classes', 'imports', 'all']))
+            .optional()
+            .describe('What to extract (default: all)')
+    }),
+    async execute({ path: filePath, extract = ['all'] }, { cwd }) {
+        const fullPath = path.resolve(cwd, filePath);
+        const ext = path.extname(fullPath).toLowerCase();
+
+        const grammarFile = GRAMMAR_MAP[ext];
+        if (!grammarFile) {
+            return JSON.stringify({
+                error: `Unsupported file type: ${ext}`,
+                supported: Object.keys(GRAMMAR_MAP)
+            });
+        }
+
+        if (!parserInitialized) {
+            await Parser.init();
+            parserInitialized = true;
+        }
+
+        const parser = new Parser();
+        const grammarPath = join(__dirname, 'grammars', grammarFile);
+        const language = await Language.load(grammarPath);
+        parser.setLanguage(language);
+
+        const content = await readFile(fullPath, 'utf-8');
+        const tree = parser.parse(content);
+        if (!tree) {
+            return JSON.stringify({ error: 'Failed to parse file' });
+        }
+
+        const categories = extract.includes('all')
+            ? ['functions', 'classes', 'imports']
+            : extract;
+
+        const nodeTypes = categories.flatMap(cat => NODE_TYPES[cat as keyof typeof NODE_TYPES] || []);
+        const extracted = extractNodes(tree.rootNode, nodeTypes);
+
+        return JSON.stringify({
+            file: filePath,
+            language: ext.slice(1),
+            totalLines: content.split('\n').length,
+            items: extracted.length,
+            extracted
+        }, null, 2);
     }
 });

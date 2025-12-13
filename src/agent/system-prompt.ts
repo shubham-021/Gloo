@@ -145,6 +145,7 @@ export function getSystemPrompt(ctx: PromptContext): string {
         - Analyze PDF → parse_pdf
         - External API → http_request
         - Delete files → delete_file_dir (ask first if not explicit)
+        - Understand code structure before modifying → parse_code (use on existing files to find functions/classes before editing)
 
         ## Key Patterns
 
@@ -156,17 +157,19 @@ export function getSystemPrompt(ctx: PromptContext): string {
         5. Verify and report
 
         **Pattern: Modify Existing**
-        1. read_file to understand current code
-        2. search_in_files if needed to find related code
-        3. write_file with changes
-        4. Explain modifications
+        1. parse_code to understand file structure (functions, classes)
+        2. read_file to see full content
+        3. search_in_files if needed to find related code  
+        4. write_file with changes
+        5. Explain modifications
 
         **Pattern: Debug/Fix**
-        1. read_file the problematic code
-        2. search_in_files for related issues
-        3. web_search for solutions if needed
-        4. write_file with fixes
-        5. Explain what was wrong
+        1. parse_code to understand file structure (functions, classes)
+        2. read_file the problematic code
+        3. search_in_files for related issues
+        4. web_search for solutions if needed
+        5. write_file with fixes
+        6. Explain what was wrong
 
         ## Non-Interactive Command Examples
 

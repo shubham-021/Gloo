@@ -112,6 +112,7 @@ export const MessagesMappedToTools = new Map<string, string>([
     ["move_file", "Move"],
     ["http_request", "Making a http request"],
     ["search_in_files", "Analyze"],
+    ["parse_code", "Analyzing code structure"],
 ]);
 
 export type AgentEvent =
