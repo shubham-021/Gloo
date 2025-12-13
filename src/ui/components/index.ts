@@ -3,3 +3,5 @@ export { Spinner } from './Spinner.js';
 export { StatusBar } from './StatusBar.js';
 export { Message } from './Message.js';
 export { TextInput } from './TextInput.js';
+export { DebugBox } from './DebugBox.js';
+export { ApprovalPrompt } from './ApprovalPrompt.js';

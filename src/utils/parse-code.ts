@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export const GRAMMAR_MAP: Record<string, string> = {
-    '.js': 'tree-sitter-javascript.wasm',
-    '.jsx': 'tree-sitter-javascript.wasm',
+    '.js': 'tree-sitter-typescript.wasm',
+    '.jsx': 'tree-sitter-typescript.wasm',
     '.ts': 'tree-sitter-typescript.wasm',
     '.tsx': 'tree-sitter-typescript.wasm',
     '.py': 'tree-sitter-python.wasm',
@@ -25,7 +25,7 @@ export async function getLanguage(ext: string): Promise<Language | null> {
     const grammarFile = GRAMMAR_MAP[ext];
     if (!grammarFile) return null;
 
-    const grammarPath = join(__dirname, 'grammars', grammarFile);
+    const grammarPath = join(__dirname, '..', 'tools', 'grammars', grammarFile);
     const language = await Language.load(grammarPath);
     languageCache.set(ext, language);
     return language;

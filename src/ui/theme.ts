@@ -21,6 +21,7 @@ export const theme = {
         // Roles
         user: '#60a5fa',         // Blue for user
         assistant: '#a78bfa',    // Purple for Gloo
+        debug: '#f59e0b',        // Amber for debug
     },
 
     icons: {
@@ -30,6 +31,7 @@ export const theme = {
         success: '✓',
         error: '✗',
         warning: '!',
+        debug: '⚡',
     },
 
     borders: {

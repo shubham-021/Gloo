@@ -3,7 +3,6 @@ import { formatToolArgs, formatApprovalPrompt } from '../utils/format.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { getSystemPrompt } from './system-prompt.js';
 import { load_STMemory, load_LTMemory, saveSTMemory } from '../memory/memory.js';
-import { getListPrompt_In } from '../inquirer.js';
 import { AgentEvent, MessagesMappedToTools } from '../types.js';
 import { getArgPreview } from '../utils/argPreview.js';
 
@@ -44,11 +43,20 @@ export class Agent {
             stepCount++;
 
             if (stepCount > MAX_STEPS) {
-                const choice = await getListPrompt_In(
-                    ['Continue', 'Stop'],
-                    `Reached ${MAX_STEPS} steps. Continue?`
-                );
-                if (choice === 'Stop') {
+                let continueResolve: (approved: boolean) => void;
+                const continuePromise = new Promise<boolean>((resolve) => {
+                    continueResolve = resolve;
+                });
+
+                yield {
+                    type: 'approval',
+                    toolName: 'Continue Execution',
+                    args: { reason: `Reached ${MAX_STEPS} steps`, action: 'Continue or Stop' },
+                    resolve: continueResolve!
+                };
+
+                const shouldContinue = await continuePromise;
+                if (!shouldContinue) {
                     yield { type: 'text', content: '\n[Stopped at user request]' };
                     return;
                 }
@@ -99,14 +107,21 @@ export class Agent {
                         : tool.needsApproval;
 
                     if (shouldApprove) {
-                        console.log(formatApprovalPrompt(toolCall.name, toolCall.args));
+                        let approvalResolve: (approved: boolean) => void;
+                        const approvalPromise = new Promise<boolean>((resolve) => {
+                            approvalResolve = resolve;
+                        });
 
-                        const choice = await getListPrompt_In(
-                            ['Approve', 'Deny'],
-                            'Allow this action?'
-                        );
+                        yield {
+                            type: 'approval',
+                            toolName: toolCall.name,
+                            args: toolCall.args,
+                            resolve: approvalResolve!
+                        };
 
-                        if (choice === 'Deny') {
+                        const approved = await approvalPromise;
+
+                        if (!approved) {
                             messages.push({
                                 role: 'tool',
                                 tool_call_id: toolCall.id,
@@ -122,10 +137,13 @@ export class Agent {
                 const argPreview = getArgPreview(toolCall.name, toolCall.args);
                 yield { type: 'tool', name: toolCall.name, message: `${toolMessage}${argPreview}` };
 
-                // Debug: Log tool call
                 if (process.env.GLOO_DEBUG === 'true') {
-                    console.log(`\n\nTOOL CALL: ${toolCall.name}`);
-                    console.log(`Args: ${JSON.stringify(toolCall.args, null, 2).split('\n')}`);
+                    yield {
+                        type: 'debug',
+                        level: 'info',
+                        title: `Tool Call: ${toolCall.name}`,
+                        message: `Arguments: ${JSON.stringify(toolCall.args, null, 2)}`
+                    };
                 }
 
                 let result: string;
@@ -136,21 +154,28 @@ export class Agent {
                         { cwd: process.cwd() }
                     );
 
-                    // Debug: Log tool result
                     if (process.env.GLOO_DEBUG === 'true') {
                         const maxLen = 500;
                         const truncated = result.length > maxLen
                             ? result.slice(0, maxLen) + `\n... [truncated ${result.length - maxLen} chars]`
                             : result;
-                        console.log(`\n\nTOOL RESULT: ${toolCall.name}`);
-                        console.log(`Output (${result.length} chars):`);
-                        console.log(`${truncated.split('\n')}`);
+                        yield {
+                            type: 'debug',
+                            level: 'info',
+                            title: `Tool Result: ${toolCall.name}`,
+                            message: `Output (${result.length} chars)`,
+                            details: truncated
+                        };
                     }
                 } catch (error) {
                     if (process.env.GLOO_DEBUG === 'true') {
-                        console.log(`\n\nTOOL ERROR: ${toolCall.name}`);
-                        console.log(`${(error as Error).message}`);
-                        console.log(`Stack: ${(error as Error).stack?.split('\n').slice(0, 3)}`);
+                        yield {
+                            type: 'debug',
+                            level: 'error',
+                            title: `Tool Error: ${toolCall.name}`,
+                            message: (error as Error).message,
+                            details: (error as Error).stack?.split('\n').slice(0, 3).join('\n')
+                        };
                     }
                     result = `Error: ${(error as Error).message}`;
                 }

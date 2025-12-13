@@ -22,10 +22,10 @@ export class ToolRegistry {
             const jsonSchema = z.toJSONSchema(tool.inputSchema as any);
 
             // Debug: Log raw zod schema
-            if (process.env.GLOO_DEBUG === 'true' && tool.name === 'web_search') {
-                console.log('\n\nRAW ZOD SCHEMA for web_search:');
-                console.log(JSON.stringify(jsonSchema, null, 2));
-            }
+            // if (process.env.GLOO_DEBUG === 'true' && tool.name === 'web_search') {
+            //     console.log('\n\nRAW ZOD SCHEMA for web_search:');
+            //     console.log(JSON.stringify(jsonSchema, null, 2));
+            // }
 
             switch (provider) {
                 case Providers.OpenAI:

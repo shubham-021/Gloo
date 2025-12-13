@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import Conf from 'conf';
-import { Banner, Spinner, StatusBar, Message, TextInput } from './components/index.js';
+import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt } from './components/index.js';
 import { theme } from './theme.js';
 import LLMCore from '../core.js';
 import { Config } from '../types.js';
@@ -14,6 +14,16 @@ interface ChatMessage {
     content: string;
 }
 
+interface DebugEntry {
+    id: number;
+    type: 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    details?: string;
+}
+
+let debugIdCounter = 0;
+
 export function App() {
     const { exit } = useApp();
     const [input, setInput] = useState('');
@@ -22,6 +32,12 @@ export function App() {
     const [streamingText, setStreamingText] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [currentTool, setCurrentTool] = useState<string | null>(null);
+    const [debugMessages, setDebugMessages] = useState<DebugEntry[]>([]);
+    const [pendingApproval, setPendingApproval] = useState<{
+        toolName: string;
+        args: Record<string, any>;
+        resolve: (approved: boolean) => void;
+    } | null>(null);
 
 
     const defaultConfig = config.get('default') as string | undefined;
@@ -77,6 +93,20 @@ export function App() {
                     setStreamingText(fullResponse);
                 } else if (event.type === 'tool') {
                     setCurrentTool(event.message);
+                } else if (event.type === 'debug') {
+                    setDebugMessages(prev => [...prev, {
+                        id: ++debugIdCounter,
+                        type: event.level,
+                        title: event.title,
+                        message: event.message,
+                        details: event.details
+                    }]);
+                } else if (event.type === 'approval') {
+                    setPendingApproval({
+                        toolName: event.toolName,
+                        args: event.args,
+                        resolve: event.resolve
+                    });
                 }
             }
 
@@ -84,8 +114,13 @@ export function App() {
             setStreamingText('');
         } catch (err) {
             if (process.env.GLOO_DEBUG === 'true') {
-                console.error('DEBUG ERROR:', err);
-                console.error('Stack:', (err as Error).stack);
+                setDebugMessages(prev => [...prev, {
+                    id: ++debugIdCounter,
+                    type: 'error',
+                    title: 'Error',
+                    message: (err as Error).message,
+                    details: (err as Error).stack
+                }]);
             }
             setError((err as Error).message);
         } finally {
@@ -118,11 +153,36 @@ export function App() {
                     </Box>
                 )}
 
+                {pendingApproval && (
+                    <ApprovalPrompt
+                        toolName={pendingApproval.toolName}
+                        args={pendingApproval.args}
+                        onApprove={() => {
+                            pendingApproval.resolve(true);
+                            setPendingApproval(null);
+                        }}
+                        onDeny={() => {
+                            pendingApproval.resolve(false);
+                            setPendingApproval(null);
+                        }}
+                    />
+                )}
+
                 {error && (
                     <Text color={theme.colors.error}>
                         {error}
                     </Text>
                 )}
+
+                {process.env.GLOO_DEBUG === 'true' && debugMessages.map(debug => (
+                    <DebugBox
+                        key={debug.id}
+                        type={debug.type}
+                        title={debug.title}
+                        message={debug.message}
+                        details={debug.details}
+                    />
+                ))}
             </Box>
 
             <StatusBar

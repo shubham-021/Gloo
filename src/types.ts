@@ -117,7 +117,9 @@ export const MessagesMappedToTools = new Map<string, string>([
 
 export type AgentEvent =
     | { type: 'text'; content: string }
-    | { type: 'tool'; name: string; message: string };
+    | { type: 'tool'; name: string; message: string }
+    | { type: 'debug'; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string }
+    | { type: 'approval'; toolName: string; args: Record<string, any>; resolve: (approved: boolean) => void };
 
 export interface SymbolInfo {
     id: string;
