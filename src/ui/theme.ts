@@ -32,6 +32,10 @@ export const theme = {
         error: '✗',
         warning: '!',
         debug: '⚡',
+        settings: '⚙',
+        selected: '●',
+        unselected: '○',
+        back: '←'
     },
 
     borders: {

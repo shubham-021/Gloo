@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useApp, Static } from 'ink';
+import { Box, Text, useApp, Static, useInput } from 'ink';
 import Conf from 'conf';
-import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt } from './components/index.js';
+import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt, SettingPanel } from './components/index.js';
 import { theme } from './theme.js';
 import LLMCore from '../core.js';
 import { Config } from '../types.js';
@@ -30,6 +30,8 @@ export function App() {
         args: Record<string, any>;
         resolve: (approved: boolean) => void;
     } | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const [configVersion, setConfigVersion] = useState(0);
 
     const streamingBufferRef = useRef('');
     const [displayText, setDisplayText] = useState('');
@@ -66,6 +68,12 @@ export function App() {
             return;
         }
 
+        if (command === 's' || command === '/settings' || command === 'settings') {
+            setShowSettings(true);
+            setInput('');
+            return;
+        }
+
         if (command === 'help') {
             setChatItems(prev => [...prev,
             { type: 'message', id: ++itemIdCounter, role: 'user', content: 'help' },
@@ -77,7 +85,7 @@ export function App() {
         }
 
         if (!currentConfig?.api || !currentConfig?.search_api) {
-            setError('Not configured. Run: gloo configure -n <name>');
+            setShowSettings(true);
             setInput('');
             return;
         }
@@ -162,63 +170,87 @@ export function App() {
         return null;
     };
 
+    const handleSettingsClose = () => {
+        setShowSettings(false);
+    };
+
+    const handleConfigChange = () => {
+        setConfigVersion(v => v + 1);
+    };
+
+    useInput((input, key) => {
+        if (input === 's' && key.ctrl) {
+            setShowSettings(true);
+        }
+    }, { isActive: !showSettings && !isLoading });
+
     return (
         <Box flexDirection='column' padding={1}>
+
             <Static items={chatItems}>
                 {renderChatItem}
             </Static>
 
-            <Box flexDirection='column' marginY={1}>
-                {displayText && (
-                    <Message role='assistant' content={displayText} />
-                )}
-
-                {isLoading && !displayText && !currentTool && (
-                    <Box paddingLeft={1} marginY={1}>
-                        <Spinner message='Thinking ...' />
-                    </Box>
-                )}
-
-                {currentTool && (
-                    <Box paddingLeft={1} marginY={1}>
-                        <ToolActivity message={currentTool} isActive={true} />
-                    </Box>
-                )}
-
-                {pendingApproval && (
-                    <ApprovalPrompt
-                        toolName={pendingApproval.toolName}
-                        args={pendingApproval.args}
-                        onApprove={() => {
-                            pendingApproval.resolve(true);
-                            setPendingApproval(null);
-                        }}
-                        onDeny={() => {
-                            pendingApproval.resolve(false);
-                            setPendingApproval(null);
-                        }}
-                    />
-                )}
-
-                {error && (
-                    <Text color={theme.colors.error}>
-                        {error}
-                    </Text>
-                )}
-            </Box>
-
-            <StatusBar
-                provider={currentConfig?.provider}
-                model={currentConfig?.model}
-            />
-
-            {!isLoading && (
-                <TextInput
-                    value={input}
-                    onChange={setInput}
-                    onSubmit={handleSubmit}
-                    placeholder='Ask me anything...'
+            {showSettings ? (
+                <SettingPanel
+                    onClose={handleSettingsClose}
+                    onConfigChange={handleConfigChange}
                 />
+            ) : (
+                <>
+                    <Box flexDirection='column' marginY={1}>
+                        {displayText && (
+                            <Message role='assistant' content={displayText} />
+                        )}
+
+                        {isLoading && !displayText && !currentTool && (
+                            <Box paddingLeft={1} marginY={1}>
+                                <Spinner message='Thinking ...' />
+                            </Box>
+                        )}
+
+                        {currentTool && (
+                            <Box paddingLeft={1} marginY={1}>
+                                <ToolActivity message={currentTool} isActive={true} />
+                            </Box>
+                        )}
+
+                        {pendingApproval && (
+                            <ApprovalPrompt
+                                toolName={pendingApproval.toolName}
+                                args={pendingApproval.args}
+                                onApprove={() => {
+                                    pendingApproval.resolve(true);
+                                    setPendingApproval(null);
+                                }}
+                                onDeny={() => {
+                                    pendingApproval.resolve(false);
+                                    setPendingApproval(null);
+                                }}
+                            />
+                        )}
+
+                        {error && (
+                            <Text color={theme.colors.error}>
+                                {error}
+                            </Text>
+                        )}
+                    </Box>
+
+                    <StatusBar
+                        provider={currentConfig?.provider}
+                        model={currentConfig?.model}
+                    />
+
+                    {!isLoading && (
+                        <TextInput
+                            value={input}
+                            onChange={setInput}
+                            onSubmit={handleSubmit}
+                            placeholder='Ask me anything...'
+                        />
+                    )}
+                </>
             )}
         </Box>
     )

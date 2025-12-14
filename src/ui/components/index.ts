@@ -5,3 +5,4 @@ export { Message } from './Message.js';
 export { TextInput } from './TextInput.js';
 export { DebugBox } from './DebugBox.js';
 export { ApprovalPrompt } from './ApprovalPrompt.js';
+export { SettingPanel } from './SettingPanel.js';

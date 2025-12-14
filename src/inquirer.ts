@@ -26,3 +26,25 @@ export async function getInputPrompt_In(): Promise<string> {
 
     return answer.command;
 }
+
+export async function getPasswordPrompt_In(message: string): Promise<string> {
+    const { value } = await inquirer.prompt([{
+        type: 'password',
+        name: 'value',
+        message,
+        mask: '*',
+        validate: (input: string) => input.trim() ? true : 'This field is required'
+    }]);
+    return value;
+}
+
+export async function getInputPrompt_InWithDefault(message: string, defaultValue?: string): Promise<string> {
+    const { value } = await inquirer.prompt([{
+        type: 'input',
+        name: 'value',
+        message,
+        default: defaultValue,
+        validate: (input: string) => input.trim() ? true : 'This field is required'
+    }]);
+    return value;
+}
