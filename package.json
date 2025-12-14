@@ -1,6 +1,6 @@
 {
   "name": "@arka07/gloo",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Your own assistant in your cli",
   "bin": {
     "gloo": "dist/main.js"
