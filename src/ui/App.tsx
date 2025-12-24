@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Box, Text, useApp, Static, useInput } from 'ink';
 import Conf from 'conf';
 import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt, SettingPanel } from './components/index.js';
@@ -42,6 +42,17 @@ export function App() {
     const [configVersion, setConfigVersion] = useState(0);
 
     const [displayText, setDisplayText] = useState('');
+
+    // useEffect(() => {
+    //     const handleResize = () => {
+    //         process.stdout.write('\x1B[2J\x1B[H');
+    //     };
+
+    //     process.stdout.on('resize', handleResize);
+    //     return () => {
+    //         process.stdout.off('resize', handleResize);
+    //     };
+    // }, []);
 
     const defaultConfig = config.get('default') as string | undefined;
     const currentConfig = defaultConfig ? config.get(defaultConfig) as Config : undefined;

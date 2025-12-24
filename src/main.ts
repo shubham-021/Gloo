@@ -13,6 +13,15 @@ import { Config, getModelsForProvider } from "./types.js";
 import { Providers } from "./providers/index.js";
 import { delete_curr_STMemory } from "./memory/memory.js";
 
+function enterFullscreen() {
+    process.stdout.write('\x1B[?1049h');
+    process.stdout.write('\x1B[H');
+}
+
+function exitFullscreen() {
+    process.stdout.write('\x1B[?1049l');
+}
+
 const program = new Command();
 const config = new Conf({ projectName: 'gloo-cli' });
 
@@ -133,18 +142,25 @@ program
     .description('Launch interactive mode with debug output')
     .action(async () => {
         process.env.GLOO_DEBUG = 'true';
+        enterFullscreen();
         render(React.createElement(App));
     });
 
 async function interactiveShell() {
+    enterFullscreen();
     render(React.createElement(App));
 }
 
-process.on('exit', delete_curr_STMemory);
+// process.on('exit', delete_curr_STMemory);
+process.on('exit', () => {
+    delete_curr_STMemory();
+    exitFullscreen();
+});
 
 process.on('SIGHUP', () => process.exit(0));
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
+
 
 if (!process.argv.slice(2).length) {
     interactiveShell();
