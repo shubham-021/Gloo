@@ -1,3 +1,5 @@
+// replaced
+
 interface PromptContext {
     cwd: string;
     date: string;
