@@ -3,16 +3,12 @@ import { Box, Text, useApp, Static, useInput } from 'ink';
 import Conf from 'conf';
 import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt, SettingPanel } from './components/index.js';
 import LLMCore from '../core.js';
-import { Config, AgentMode } from '../types.js';
+import { Config, AgentMode, ChatItem } from '../types.js';
 import { ToolActivity } from './components/ToolActivity.js';
+import { executeCommand } from './commands.js';
 
 const config = new Conf({ projectName: 'gloo-cli' });
 const MAX_CHAT_ITEMS = 100;
-
-type ChatItem =
-    | { type: 'banner'; id: number }
-    | { type: 'message'; id: number; role: 'user' | 'assistant'; content: string }
-    | { type: 'debug'; id: number; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string };
 
 const addChatItem = (prev: ChatItem[], ...items: ChatItem[]): ChatItem[] => {
     const newItems = [...prev, ...items];
@@ -61,62 +57,17 @@ export function App() {
         const trimmed = value.trim();
         if (!trimmed) return;
 
-        const command = trimmed.toLowerCase();
+        const handled = executeCommand(trimmed, {
+            exit,
+            setShowSettings,
+            setInput,
+            setMode,
+            setChatItems,
+            addChatItem,
+            nextId: () => ++itemIdCounter
+        });
 
-        if (command === 'q' || command === 'quit') {
-            exit();
-            return;
-        }
-
-        if (command === 's' || command === '/settings' || command === 'settings') {
-            setShowSettings(true);
-            setInput('');
-            return;
-        }
-
-        if (command === 'help') {
-            setChatItems(prev => addChatItem(prev,
-                { type: 'message', id: ++itemIdCounter, role: 'user', content: 'help' },
-                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Commands: /chat /plan /build (modes), /clear (reset screen), q (quit), s (settings)' }
-            ));
-
-            setInput('');
-            return;
-        }
-
-        if (command === '/chat' || command === 'chat') {
-            setMode(AgentMode.CHAT);
-            setChatItems(prev => addChatItem(prev,
-                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Switched to Chat Mode' }
-            ));
-            setInput('');
-            return;
-        }
-
-        if (command === '/plan' || command === 'plan') {
-            setMode(AgentMode.PLAN);
-            setChatItems(prev => addChatItem(prev,
-                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Switched to Plan Mode' }
-            ));
-            setInput('');
-            return;
-        }
-
-        if (command === '/build' || command === 'build') {
-            setMode(AgentMode.BUILD);
-            setChatItems(prev => addChatItem(prev,
-                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Switched to Build Mode' }
-            ));
-            setInput('');
-            return;
-        }
-
-        if (command === '/clear' || command === 'clear') {
-            process.stdout.write('\x1B[2J\x1B[H');
-            setChatItems([{ type: 'banner', id: ++itemIdCounter }]);
-            setInput('');
-            return;
-        }
+        if (handled) return;
 
         if (!currentConfig?.api || !currentConfig?.search_api) {
             setShowSettings(true);

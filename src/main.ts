@@ -142,19 +142,19 @@ program
     .description('Launch interactive mode with debug output')
     .action(async () => {
         process.env.GLOO_DEBUG = 'true';
-        enterFullscreen();
+        // enterFullscreen();
         render(React.createElement(App));
     });
 
 async function interactiveShell() {
-    enterFullscreen();
+    // enterFullscreen();
     render(React.createElement(App));
 }
 
 // process.on('exit', delete_curr_STMemory);
 process.on('exit', () => {
     delete_curr_STMemory();
-    exitFullscreen();
+    // exitFullscreen();
 });
 
 process.on('SIGHUP', () => process.exit(0));

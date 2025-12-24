@@ -37,7 +37,7 @@ export function StatusBar({ provider, model, mode }: StatusBarProps) {
                 }
             </Text>
             <Text color={theme.colors.textDim}> | </Text>
-            <Text color={theme.colors.textMuted}>'/chat' '/plan' '/build' to switch modes</Text>
+            <Text color={theme.colors.textMuted}>help for commands</Text>
         </Box>
     )
 }

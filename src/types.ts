@@ -155,3 +155,8 @@ export enum AgentMode {
     PLAN = 'plan',
     BUILD = 'build'
 }
+
+export type ChatItem =
+    | { type: 'banner'; id: number }
+    | { type: 'message'; id: number; role: 'user' | 'assistant'; content: string }
+    | { type: 'debug'; id: number; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string };
