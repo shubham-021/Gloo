@@ -153,7 +153,8 @@ export interface StructuredIndex {
 export enum AgentMode {
     CHAT = 'chat',
     PLAN = 'plan',
-    BUILD = 'build'
+    BUILD = 'build',
+    ROAST = 'roast'
 }
 
 export type ChatItem =

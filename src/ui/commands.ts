@@ -14,6 +14,7 @@ const HELP_MESSAGE = `Available Commands:
   /chat      Chat mode
   /plan      Plan mode  
   /build     Build mode
+  /roast     Roast mode
   /clear     Reset screen
   q          Quit
   s          Settings
@@ -73,6 +74,15 @@ export function executeCommand(input: string, ctx: CommandContext): boolean {
             ctx.setChatItems(prev => ctx.addChatItem(prev,
                 { type: 'message', id: ctx.nextId(), role: 'user', content: 'help' },
                 { type: 'message', id: ctx.nextId(), role: 'assistant', content: HELP_MESSAGE }
+            ));
+            ctx.setInput('');
+            return true;
+
+        case '/roast':
+        case 'roast':
+            ctx.setMode(AgentMode.ROAST);
+            ctx.setChatItems(prev => ctx.addChatItem(prev,
+                { type: 'message', id: ctx.nextId(), role: 'assistant', content: 'Roast Mode. No mercy. Bring it.' }
             ));
             ctx.setInput('');
             return true;

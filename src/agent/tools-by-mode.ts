@@ -26,6 +26,9 @@ export function getToolsForMode(
         case AgentMode.BUILD:
             registry.registerAll(allTools(searchApi));
             break;
+
+        case AgentMode.ROAST:
+            break;
     }
 
     return registry;

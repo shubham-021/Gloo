@@ -3,11 +3,13 @@ import { getAwarenessPrompt } from './awareness.js';
 import { CHAT_PROMPT } from './chat.js';
 import { PLAN_PROMPT } from './plan.js';
 import { BUILD_PROMPT } from './build.js';
+import { ROAST_PROMPT } from './roast.js';
 
 const MODE_PROMPTS: Record<AgentMode, string> = {
     [AgentMode.CHAT]: CHAT_PROMPT,
     [AgentMode.PLAN]: PLAN_PROMPT,
-    [AgentMode.BUILD]: BUILD_PROMPT
+    [AgentMode.BUILD]: BUILD_PROMPT,
+    [AgentMode.ROAST]: ROAST_PROMPT
 };
 
 interface PromptContext {
