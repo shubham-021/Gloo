@@ -77,7 +77,7 @@ export function App() {
         if (command === 'help') {
             setChatItems(prev => addChatItem(prev,
                 { type: 'message', id: ++itemIdCounter, role: 'user', content: 'help' },
-                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Commands: q/quit (exit), s/settings (open settings), Ctrl+S (settings), help. Just type your question.' }
+                { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Commands: /chat /plan /build (modes), /clear (reset screen), q (quit), s (settings)' }
             ));
 
             setInput('');
@@ -107,6 +107,13 @@ export function App() {
             setChatItems(prev => addChatItem(prev,
                 { type: 'message', id: ++itemIdCounter, role: 'assistant', content: 'Switched to Build Mode' }
             ));
+            setInput('');
+            return;
+        }
+
+        if (command === '/clear' || command === 'clear') {
+            process.stdout.write('\x1B[2J\x1B[H');
+            setChatItems([{ type: 'banner', id: ++itemIdCounter }]);
             setInput('');
             return;
         }
