@@ -1,5 +1,7 @@
 # Gloo CLI
 
+[GitHub](https://github.com/shubham-021/Gloo.git)
+
 ## Supported Providers
 
 - OpenAI (GPT-4, GPT-4o mini, GPT-4 Turbo)
@@ -26,12 +28,12 @@ gloo init
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `gloo init` | First-time setup |
-| `gloo` | Interactive chat mode |
-| `gloo ask <question>` | One-off question |
-| `gloo debug` | Chat with debug output |
+| Command               | Description            |
+| --------------------- | ---------------------- |
+| `gloo init`           | First-time setup       |
+| `gloo`                | Interactive chat mode  |
+| `gloo ask <question>` | One-off question       |
+| `gloo debug`          | Chat with debug output |
 
 ## Interactive Mode
 
