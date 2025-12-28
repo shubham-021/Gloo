@@ -6,7 +6,8 @@ import { AgentMode } from '../../types.js';
 interface StatusBarProps {
     provider?: string;
     model?: string;
-    mode: AgentMode
+    mode: AgentMode;
+    isLoading?: boolean;
 }
 
 const MODE_DISPLAY: Record<AgentMode, { label: string; color: string; icon: string }> = {
@@ -16,7 +17,7 @@ const MODE_DISPLAY: Record<AgentMode, { label: string; color: string; icon: stri
     [AgentMode.ROAST]: { label: 'Roast', color: '#ef4444', icon: '' }
 };
 
-export function StatusBar({ provider, model, mode }: StatusBarProps) {
+export function StatusBar({ provider, model, mode, isLoading }: StatusBarProps) {
 
     const modeInfo = MODE_DISPLAY[mode];
 
@@ -38,7 +39,9 @@ export function StatusBar({ provider, model, mode }: StatusBarProps) {
                 }
             </Text>
             <Text color={theme.colors.textDim}> | </Text>
-            <Text color={theme.colors.textMuted}>help for commands</Text>
+            <Text color={theme.colors.textMuted}>
+                {isLoading ? 'esc to cancel' : 'help for commands'}
+            </Text>
         </Box>
     )
 }

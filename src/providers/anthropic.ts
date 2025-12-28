@@ -50,7 +50,8 @@ export class AnthropicProvider implements ChatProvider {
                 'x-api-key': this.apiKey,
                 'anthropic-version': '2023-06-01'
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: options?.signal
         });
 
         if (!response.ok) {
@@ -88,7 +89,7 @@ export class AnthropicProvider implements ChatProvider {
         };
     }
 
-    async *stream(messages: ChatMessage[]): AsyncGenerator<{ text?: string }> {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
         const systemMessage = messages.find(m => m.role === 'system');
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
 
@@ -122,7 +123,8 @@ export class AnthropicProvider implements ChatProvider {
                 'x-api-key': this.apiKey,
                 'anthropic-version': '2023-06-01'
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal
         });
 
         if (!response.ok) {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, Text, useApp, Static, useInput } from 'ink';
 import Conf from 'conf';
 import { Banner, Spinner, StatusBar, Message, TextInput, DebugBox, ApprovalPrompt, SettingPanel } from './components/index.js';
@@ -6,6 +6,7 @@ import LLMCore from '../core.js';
 import { Config, AgentMode, ChatItem } from '../types.js';
 import { ToolActivity } from './components/ToolActivity.js';
 import { executeCommand } from './commands.js';
+import { parseFileAttachment, parseFileMentions } from '../utils/fileAttachment.js';
 
 const config = new Conf({ projectName: 'gloo-cli' });
 const MAX_CHAT_ITEMS = 100;
@@ -39,6 +40,8 @@ export function App() {
 
     const [displayText, setDisplayText] = useState('');
 
+    const abortControllerRef = useRef<AbortController | null>(null);
+
     // useEffect(() => {
     //     const handleResize = () => {
     //         process.stdout.write('\x1B[2J\x1B[H');
@@ -56,6 +59,11 @@ export function App() {
     const handleSubmit = async (value: string) => {
         const trimmed = value.trim();
         if (!trimmed) return;
+
+        const pureAttachment = parseFileAttachment(trimmed);
+
+        const cwd = process.cwd();
+        const { attachments: mentionedFiles } = parseFileMentions(trimmed, cwd);
 
         const handled = executeCommand(trimmed, {
             exit,
@@ -75,13 +83,29 @@ export function App() {
             return;
         }
 
+        let userMessage = trimmed;
+        let displayMessage = trimmed;
+
+        if (pureAttachment) {
+            displayMessage = pureAttachment.name;
+            userMessage = pureAttachment.isImage
+                ? `[Attached image: ${pureAttachment.name}]\n(base64:${pureAttachment.content})`
+                : `${pureAttachment.name}\n\n[Referenced file: ${pureAttachment.path}]`;
+        } else if (mentionedFiles.length > 0) {
+            const filePaths = mentionedFiles.map(f => f.path).join(', ');
+            userMessage = `${trimmed}\n\n[Referenced files: ${filePaths}]`;
+        }
+
         setChatItems(prev => addChatItem(prev,
-            { type: 'message', id: ++itemIdCounter, role: 'user', content: trimmed }
+            { type: 'message', id: ++itemIdCounter, role: 'user', content: displayMessage }
         ));
         setInput('');
         setIsLoading(true);
         setDisplayText('');
         setError(null);
+
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
 
         try {
             const llm = new LLMCore(
@@ -94,7 +118,7 @@ export function App() {
             llm.setMode(mode);
 
             let fullResponse = '';
-            for await (const event of llm.chat(trimmed)) {
+            for await (const event of llm.chat(userMessage, signal)) {
                 if (event.type === 'text') {
                     setCurrentTool(null);
                     fullResponse += event.content;
@@ -122,6 +146,8 @@ export function App() {
             setChatItems(prev => addChatItem(prev, { type: 'message', id: ++itemIdCounter, role: 'assistant', content: fullResponse }));
             setDisplayText('');
         } catch (err) {
+            if ((err as Error).name === 'AbortError') return;
+
             if (process.env.GLOO_DEBUG === 'true') {
                 setChatItems(prev => addChatItem(prev, {
                     type: 'debug',
@@ -170,7 +196,20 @@ export function App() {
         if (input === 's' && key.ctrl) {
             setShowSettings(true);
         }
-    }, { isActive: !showSettings && !isLoading });
+
+        if (key.escape && isLoading) {
+            abortControllerRef.current?.abort();
+            setIsLoading(false);
+            setCurrentTool(null);
+            setDisplayText('');
+            setChatItems(prev => addChatItem(prev, {
+                type: 'message',
+                id: ++itemIdCounter,
+                role: 'assistant',
+                content: '[Cancelled]'
+            }));
+        }
+    }, { isActive: !showSettings });
 
     return (
         <Box flexDirection='column' padding={1}>
@@ -231,6 +270,7 @@ export function App() {
                         provider={currentConfig?.provider}
                         model={currentConfig?.model}
                         mode={mode}
+                        isLoading={isLoading}
                     />
 
                     {!isLoading && (

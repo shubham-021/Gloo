@@ -19,9 +19,10 @@ export interface ChatResponse {
 export interface InvokeOptions {
     tools?: any[];
     tool_choice?: 'auto' | 'none' | 'required';
+    signal?: AbortSignal
 }
 
 export interface ChatProvider {
     invoke(messages: ChatMessage[], options?: InvokeOptions): Promise<ChatResponse>;
-    stream(messages: ChatMessage[]): AsyncGenerator<{ text?: string }>;
+    stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }>;
 }

@@ -41,6 +41,25 @@ export function TextInput({ value, onChange, onSubmit, placeholder }: TextInputP
         }
     }, { isActive: isActive && suggestions.length > 0 });
 
+    // useInput((input, key) => {
+    //     if (input === 'w' || input === 'u' || input === '\x17' || input === '\x15') {
+    //         console.log(`DEBUG: input="${input}" ctrl=${key.ctrl} meta=${key.meta}`);
+    //     }
+
+    //     if ((key.ctrl && input === 'w') || input === '\x17') { // ctrl + w
+    //         const words = value.split(/(\s+)/);
+    //         words.pop();
+    //         if (words.length > 0 && words[words.length - 1].match(/^\s+$/)) words.pop();
+    //         onChange(words.join(''));
+    //         setInputKey(k => k + 1);
+    //     }
+
+    //     if ((key.ctrl && input === 'u') || input === '\x15') { // ctrl + u
+    //         onChange('');
+    //         setInputKey(k => k + 1);
+    //     }
+    // });
+
     const handleSubmit = (val: string) => {
         if (isActive && suggestions.length > 0) {
             const selected = suggestions[selectedIndex];

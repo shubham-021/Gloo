@@ -38,7 +38,8 @@ export class OpenAIProvider implements ChatProvider {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${this.apiKey}`
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: options?.signal
         });
 
         if (!response.ok) {
@@ -71,7 +72,7 @@ export class OpenAIProvider implements ChatProvider {
         };
     }
 
-    async *stream(messages: ChatMessage[]): AsyncGenerator<{ text?: string }> {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -88,7 +89,8 @@ export class OpenAIProvider implements ChatProvider {
                     ...(m.tool_calls && { tool_calls: m.tool_calls })
                 })),
                 stream: true
-            })
+            }),
+            signal
         });
 
         if (!response.ok) {

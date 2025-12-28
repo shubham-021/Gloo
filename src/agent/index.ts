@@ -42,7 +42,7 @@ export class Agent {
         return this.mode;
     }
 
-    async *run(query: string): AsyncGenerator<AgentEvent> {
+    async *run(query: string, signal?: AbortSignal): AsyncGenerator<AgentEvent> {
         const systemPrompt = getSystemPrompt({
             cwd: process.cwd(),
             date: new Date().toLocaleDateString(),
@@ -89,11 +89,12 @@ export class Agent {
 
             const response = await this.llm.invoke(messages, {
                 tools,
-                tool_choice: 'auto'
+                tool_choice: 'auto',
+                signal
             });
 
             if (!response.tool_calls || response.tool_calls.length === 0) {
-                const stream = this.llm.stream(messages);
+                const stream = this.llm.stream(messages, signal);
                 let fullText = '';
                 for await (const chunk of stream) {
                     if (chunk.text) {

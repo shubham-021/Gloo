@@ -13,6 +13,8 @@ export function getToolsForMode(
 
     switch (mode) {
         case AgentMode.CHAT:
+            registry.register(readFileTool);
+            registry.register(searchInFilesTool);
             registry.register(makeWebSearchTool(searchApi));
             break;
 

@@ -65,7 +65,8 @@ export class GeminiProvider implements ChatProvider {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: options?.signal
         });
 
         if (!response.ok) {
@@ -105,7 +106,7 @@ export class GeminiProvider implements ChatProvider {
         };
     }
 
-    async *stream(messages: ChatMessage[]): AsyncGenerator<{ text?: string }> {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
         const body = {
             contents: this.buildContents(messages)
         };
@@ -115,7 +116,8 @@ export class GeminiProvider implements ChatProvider {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal
         });
 
         if (!response.ok) {
