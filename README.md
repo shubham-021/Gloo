@@ -2,6 +2,8 @@
 
 [GitHub](https://github.com/shubham-021/Gloo.git)
 
+https://github.com/user-attachments/assets/77695eca-2b24-4539-a90e-a66fec57bcdd
+
 ## Supported Providers
 
 - OpenAI (GPT-4, GPT-4o mini, GPT-4 Turbo)
