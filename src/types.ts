@@ -26,33 +26,43 @@ export type Config = {
 } | undefined;
 
 
-export enum OpenAIModels {
-    GPT5 = "gpt-5",
-    GPT4 = "gpt-4",
-    GPT4oMini = "gpt-4o-mini",
-    GPT4Turbo = "gpt-turbo"
+export interface ModelInfo {
+    id: string;
+    label: string;
+    supportsThinking: boolean;
 }
 
-export enum GeminiModels {
-    Gemini15Pro = "gemini-1.5-pro",
-    Gemini15Flash = "gemini-1.5-flash",
-    Gemini25Pro = "gemini-2.5-pro",
-    Gemini25Flash = "gemini-2.5-flash"
-}
+export const OpenAIModels: ModelInfo[] = [
+    { id: 'gpt-5', label: 'gpt-5', supportsThinking: false },
+    { id: 'gpt-4.1', label: 'gpt-4.1', supportsThinking: false },
+    { id: 'gpt-4o', label: 'gpt-4o', supportsThinking: false },
+    { id: 'gpt-4o-mini', label: 'gpt-4o-mini', supportsThinking: false },
+    { id: 'o3', label: 'o3', supportsThinking: true },
+    { id: 'o3-mini', label: 'o3-mini', supportsThinking: true },
+    { id: 'o4-mini', label: 'o4-mini', supportsThinking: true },
+];
 
-export enum ClaudeModels {
-    Claude3Opus = "claude-3-opus",
-    Claude3Sonnet = "claude-3-sonnet",
-    Claude3Haiku = "claude-3-haiku"
-}
+export const GeminiModels: ModelInfo[] = [
+    { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro', supportsThinking: true },
+    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash', supportsThinking: true },
+    { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash', supportsThinking: false },
+    { id: 'gemini-1.5-pro', label: 'gemini-1.5-pro', supportsThinking: false },
+    { id: 'gemini-1.5-flash', label: 'gemini-1.5-flash', supportsThinking: false },
+];
 
-export const ProviderModels: Record<Providers, string[]> = {
-    [Providers.OpenAI]: Object.values(OpenAIModels),
-    [Providers.Claude]: Object.values(ClaudeModels),
-    [Providers.Gemini]: Object.values(GeminiModels),
-}
+export const ClaudeModels: ModelInfo[] = [
+    { id: 'claude-sonnet-4-6', label: 'claude-sonnet-4.6', supportsThinking: true },
+    { id: 'claude-opus-4-6', label: 'claude-opus-4.6', supportsThinking: true },
+    { id: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4.5', supportsThinking: false },
+];
 
-export function getModelsForProvider(provider: Providers): string[] {
+export const ProviderModels: Record<Providers, ModelInfo[]> = {
+    [Providers.OpenAI]: OpenAIModels,
+    [Providers.Claude]: ClaudeModels,
+    [Providers.Gemini]: GeminiModels,
+};
+
+export function getModelsForProvider(provider: Providers): ModelInfo[] {
     return ProviderModels[provider];
 }
 
@@ -117,6 +127,7 @@ export const MessagesMappedToTools = new Map<string, string>([
 
 export type AgentEvent =
     | { type: 'text'; content: string }
+    | { type: 'thinking', content: string }
     | { type: 'tool'; name: string; message: string }
     | { type: 'debug'; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string }
     | { type: 'approval'; toolName: string; args: Record<string, any>; resolve: (approved: boolean) => void };
@@ -160,4 +171,5 @@ export enum AgentMode {
 export type ChatItem =
     | { type: 'banner'; id: number }
     | { type: 'message'; id: number; role: 'user' | 'assistant'; content: string }
+    | { type: 'thinking'; id: number; content: string }
     | { type: 'debug'; id: number; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string };

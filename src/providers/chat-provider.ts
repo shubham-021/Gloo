@@ -13,16 +13,18 @@ export interface ToolCall {
 
 export interface ChatResponse {
     content: string;
+    thinking?: string;
     tool_calls?: ToolCall[];
 }
 
 export interface InvokeOptions {
     tools?: any[];
     tool_choice?: 'auto' | 'none' | 'required';
-    signal?: AbortSignal
+    signal?: AbortSignal;
+    thinking?: boolean;
 }
 
 export interface ChatProvider {
     invoke(messages: ChatMessage[], options?: InvokeOptions): Promise<ChatResponse>;
-    stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }>;
+    stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string; thinking?: string }>;
 }

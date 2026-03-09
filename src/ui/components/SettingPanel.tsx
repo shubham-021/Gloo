@@ -134,11 +134,12 @@ export function SettingPanel({ onClose, onConfigChange }: SettingPanelProps) {
 
     const modelItems = useMemo(() => {
         const items: { label: string; value: string }[] = selectedProvider
-            ? getModelsForProvider(selectedProvider).map(m => ({ label: m, value: m }))
+            ? getModelsForProvider(selectedProvider).map(m => ({ label: m.label, value: m.id }))
             : [];
         items.push({ label: `${theme.icons.back} Back`, value: '__back__' });
         return items;
     }, [selectedProvider]);
+
 
     const handleModelSelect = (item: { value: string }) => {
         if (item.value === '__back__') {

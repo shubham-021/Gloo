@@ -8,6 +8,7 @@ interface StatusBarProps {
     model?: string;
     mode: AgentMode;
     isLoading?: boolean;
+    thinkingEnabled?: boolean;
 }
 
 const MODE_DISPLAY: Record<AgentMode, { label: string; color: string; icon: string }> = {
@@ -17,7 +18,7 @@ const MODE_DISPLAY: Record<AgentMode, { label: string; color: string; icon: stri
     [AgentMode.ROAST]: { label: 'Roast', color: '#ef4444', icon: '' }
 };
 
-export function StatusBar({ provider, model, mode, isLoading }: StatusBarProps) {
+export function StatusBar({ provider, model, mode, isLoading, thinkingEnabled }: StatusBarProps) {
 
     const modeInfo = MODE_DISPLAY[mode];
 
@@ -32,6 +33,12 @@ export function StatusBar({ provider, model, mode, isLoading }: StatusBarProps) 
                 {modeInfo.label}
             </Text>
             <Text color={theme.colors.textDim}> | </Text>
+            {thinkingEnabled && (
+                <>
+                    <Text color={theme.colors.warning} bold>○ Think</Text>
+                    <Text color={theme.colors.textDim}> | </Text>
+                </>
+            )}
             <Text color={theme.colors.textDim}>
                 {provider && model
                     ? `${theme.icons.success} ${provider} → ${model}`
@@ -40,8 +47,9 @@ export function StatusBar({ provider, model, mode, isLoading }: StatusBarProps) 
             </Text>
             <Text color={theme.colors.textDim}> | </Text>
             <Text color={theme.colors.textMuted}>
-                {isLoading ? 'esc to cancel' : 'help for commands'}
+                {isLoading ? 'esc to cancel' : 'ctrl+t think • help for commands'}
             </Text>
+
         </Box>
     )
 }

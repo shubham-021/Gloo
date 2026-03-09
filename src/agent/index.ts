@@ -42,7 +42,7 @@ export class Agent {
         return this.mode;
     }
 
-    async *run(query: string, signal?: AbortSignal): AsyncGenerator<AgentEvent> {
+    async *run(query: string, signal?: AbortSignal, thinking?: boolean): AsyncGenerator<AgentEvent> {
         const systemPrompt = getSystemPrompt({
             cwd: process.cwd(),
             date: new Date().toLocaleDateString(),
@@ -90,13 +90,19 @@ export class Agent {
             const response = await this.llm.invoke(messages, {
                 tools,
                 tool_choice: 'auto',
-                signal
+                signal,
+                thinking
             });
 
             if (!response.tool_calls || response.tool_calls.length === 0) {
-                const stream = this.llm.stream(messages, signal);
+                const stream = this.llm.stream(messages, signal, thinking);
                 let fullText = '';
+                let fullThinking = '';
                 for await (const chunk of stream) {
+                    if (chunk.thinking) {
+                        yield { type: 'thinking', content: chunk.thinking };
+                        fullThinking += chunk.thinking;
+                    }
                     if (chunk.text) {
                         yield { type: 'text', content: chunk.text };
                         fullText += chunk.text;

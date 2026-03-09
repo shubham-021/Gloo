@@ -16,7 +16,7 @@ export class AnthropicProvider implements ChatProvider {
 
         const body: any = {
             model: this.model,
-            max_tokens: 4096,
+            max_tokens: 16000,
             messages: nonSystemMessages.map(m => {
                 if (m.role === 'tool') {
                     return {
@@ -31,6 +31,17 @@ export class AnthropicProvider implements ChatProvider {
                 return { role: m.role, content: m.content };
             })
         };
+
+        if (options?.thinking) {
+            if (this.model.includes('4-6')) {
+                body.thinking = { type: 'adaptive' };
+            } else {
+                body.thinking = {
+                    type: 'enabled',
+                    budget_tokens: 10000
+                };
+            }
+        }
 
         if (systemMessage) {
             body.system = systemMessage.content;
@@ -65,10 +76,13 @@ export class AnthropicProvider implements ChatProvider {
         const data = await response.json();
 
         let content = '';
+        let thinking = '';
         const tool_calls: ToolCall[] = [];
 
         for (const block of data.content) {
-            if (block.type === 'text') {
+            if (block.type === 'thinking') {
+                thinking += block.thinking
+            } else if (block.type === 'text') {
                 content += block.text;
             } else if (block.type === 'tool_use') {
                 const args = block.input ?? {};
@@ -85,17 +99,18 @@ export class AnthropicProvider implements ChatProvider {
 
         return {
             content,
+            thinking: thinking || undefined,
             tool_calls: tool_calls.length > 0 ? tool_calls : undefined
         };
     }
 
-    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string, thinking?: string }> {
         const systemMessage = messages.find(m => m.role === 'system');
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
 
         const body: any = {
             model: this.model,
-            max_tokens: 4096,
+            max_tokens: 16000,
             stream: true,
             messages: nonSystemMessages.map(m => {
                 if (m.role === 'tool') {
@@ -111,6 +126,17 @@ export class AnthropicProvider implements ChatProvider {
                 return { role: m.role, content: m.content };
             })
         };
+
+        if (thinking) {
+            if (this.model.includes('4-6')) {
+                body.thinking = { type: 'adaptive' };
+            } else {
+                body.thinking = {
+                    type: 'enabled',
+                    budget_tokens: 10000
+                };
+            }
+        }
 
         if (systemMessage) {
             body.system = systemMessage.content;
@@ -150,7 +176,9 @@ export class AnthropicProvider implements ChatProvider {
                 if (line.startsWith('data: ')) {
                     try {
                         const data = JSON.parse(line.slice(6));
-                        if (data.type === 'content_block_delta' && data.delta?.text) {
+                        if (data.delta?.type === 'thinking_delta') {
+                            yield { thinking: data.delta.thinking }
+                        } else if (data.type === 'content_block_delta' && data.delta?.text) {
                             yield { text: data.delta.text };
                         }
                     } catch {

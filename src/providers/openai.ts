@@ -68,11 +68,12 @@ export class OpenAIProvider implements ChatProvider {
 
         return {
             content: message.content ?? '',
+            thinking: message.reasoning_content ?? undefined,
             tool_calls
         };
     }
 
-    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string, thinking?: string }> {
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -120,6 +121,8 @@ export class OpenAIProvider implements ChatProvider {
                     try {
                         const parsed = JSON.parse(data);
                         const content = parsed.choices[0]?.delta?.content;
+                        const reasoning = parsed.choices[0]?.delta?.reasoning_content;
+                        if (reasoning) yield { thinking: reasoning }
                         if (content) yield { text: content };
                     } catch {
                         // Skip invalid JSON

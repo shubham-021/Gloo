@@ -7,6 +7,7 @@ import { Config, AgentMode, ChatItem } from '../types.js';
 import { ToolActivity } from './components/ToolActivity.js';
 import { executeCommand } from './commands.js';
 import { parseFileAttachment, parseFileMentions } from '../utils/fileAttachment.js';
+import { theme } from './theme.js';
 
 const config = new Conf({ projectName: 'gloo-cli' });
 const MAX_CHAT_ITEMS = 100;
@@ -39,6 +40,8 @@ export function App() {
     const [configVersion, setConfigVersion] = useState(0);
 
     const [displayText, setDisplayText] = useState('');
+    const [thinkingEnabled, setThinkingEnabled] = useState(false);
+    const [displayThinking, setDisplayThinking] = useState('');
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -118,8 +121,13 @@ export function App() {
             llm.setMode(mode);
 
             let fullResponse = '';
-            for await (const event of llm.chat(userMessage, signal)) {
-                if (event.type === 'text') {
+            let fullThinking = '';
+
+            for await (const event of llm.chat(userMessage, signal, thinkingEnabled)) {
+                if (event.type === 'thinking') {
+                    fullThinking += event.content;
+                    setDisplayThinking(fullThinking);
+                } else if (event.type === 'text') {
                     setCurrentTool(null);
                     fullResponse += event.content;
                     setDisplayText(fullResponse);
@@ -143,8 +151,16 @@ export function App() {
                 }
             }
 
-            setChatItems(prev => addChatItem(prev, { type: 'message', id: ++itemIdCounter, role: 'assistant', content: fullResponse }));
+            if (fullThinking) {
+                setChatItems(prev => addChatItem(prev, {
+                    type: 'thinking', id: ++itemIdCounter, content: fullThinking
+                }));
+            }
+            setChatItems(prev => addChatItem(prev, {
+                type: 'message', id: ++itemIdCounter, role: 'assistant', content: fullResponse
+            }));
             setDisplayText('');
+            setDisplayThinking('');
         } catch (err) {
             if ((err as Error).name === 'AbortError') return;
 
@@ -162,6 +178,7 @@ export function App() {
         } finally {
             setIsLoading(false);
             setCurrentTool(null);
+            setDisplayThinking('');
         }
     }
 
@@ -170,6 +187,18 @@ export function App() {
             return <Banner key={item.id} />;
         } else if (item.type === 'message') {
             return <Message key={item.id} role={item.role} content={item.content} />;
+        } else if (item.type === 'thinking') {
+            return (
+                <Box key={item.id} paddingLeft={1} marginBottom={0} flexDirection="column">
+                    <Box gap={1}>
+                        <Text color={theme.colors.textDim}>{theme.icons.thinking}</Text>
+                        <Text color={theme.colors.textDim} italic>Thought</Text>
+                    </Box>
+                    <Box paddingLeft={2}>
+                        <Text color={theme.colors.textDim} dimColor>{item.content}</Text>
+                    </Box>
+                </Box>
+            );
         } else if (item.type === 'debug' && process.env.GLOO_DEBUG === 'true') {
             return (
                 <DebugBox
@@ -193,7 +222,7 @@ export function App() {
     };
 
     useInput((input, key) => {
-        if (input === 's' && key.ctrl) {
+        if (key.ctrl && input === 's') {
             setShowSettings(true);
         }
 
@@ -208,6 +237,10 @@ export function App() {
                 role: 'assistant',
                 content: '[Cancelled]'
             }));
+        }
+
+        if (key.ctrl && input === 't') {
+            setThinkingEnabled(prev => !prev);
         }
     }, { isActive: !showSettings });
 
@@ -226,9 +259,22 @@ export function App() {
             ) : (
                 <>
                     <Box flexDirection='column' marginY={1}>
+                        {displayThinking && (
+                            <Box paddingLeft={1} marginBottom={1} flexDirection="column">
+                                <Box gap={1}>
+                                    <Text color={theme.colors.textDim}>{theme.icons.thinking}</Text>
+                                    <Text color={theme.colors.textDim} italic>Thinking...</Text>
+                                </Box>
+                                <Box paddingLeft={2}>
+                                    <Text color={theme.colors.textDim} dimColor>{displayThinking}</Text>
+                                </Box>
+                            </Box>
+                        )}
+
                         {displayText && (
                             <Message role='assistant' content={displayText} />
                         )}
+
 
                         {isLoading && !displayText && !currentTool && (
                             <Box paddingLeft={1} marginY={1}>
@@ -271,6 +317,7 @@ export function App() {
                         model={currentConfig?.model}
                         mode={mode}
                         isLoading={isLoading}
+                        thinkingEnabled={thinkingEnabled}
                     />
 
                     {!isLoading && (

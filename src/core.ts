@@ -30,8 +30,8 @@ class LLMCore {
         return this.agent.getMode();
     }
 
-    async *chat(query: string, signal?: AbortSignal): AsyncGenerator<AgentEvent> {
-        yield* this.agent.run(query, signal);
+    async *chat(query: string, signal?: AbortSignal, thinking?: boolean): AsyncGenerator<AgentEvent> {
+        yield* this.agent.run(query, signal, thinking);
     }
 }
 export default LLMCore;

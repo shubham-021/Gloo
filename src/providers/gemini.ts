@@ -54,6 +54,14 @@ export class GeminiProvider implements ChatProvider {
             contents: this.buildContents(messages)
         };
 
+        if (options?.thinking) {
+            body.generationConfig = {
+                thinkingConfig: {
+                    includeThoughts: true
+                }
+            }
+        }
+
         if (options?.tools?.length) {
             body.tools = [{
                 functionDeclarations: options.tools
@@ -82,10 +90,13 @@ export class GeminiProvider implements ChatProvider {
         const parts = candidate?.content?.parts ?? [];
 
         let content = '';
+        let thinking = '';
         const tool_calls: ToolCall[] = [];
 
         for (const part of parts) {
-            if (part.text) {
+            if (part.thought && part.text) {
+                thinking += part.text;
+            } else if (part.text) {
                 content += part.text;
             } else if (part.functionCall) {
                 const args = part.functionCall.args ?? {};
@@ -102,14 +113,23 @@ export class GeminiProvider implements ChatProvider {
 
         return {
             content,
+            thinking: thinking || undefined,
             tool_calls: tool_calls.length > 0 ? tool_calls : undefined
         };
     }
 
-    async *stream(messages: ChatMessage[], signal?: AbortSignal): AsyncGenerator<{ text?: string }> {
-        const body = {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string, thinking?: string }> {
+        const body: any = {
             contents: this.buildContents(messages)
         };
+
+        if (thinking) {
+            body.generationConfig = {
+                thinkingConfig: {
+                    includeThoughts: true
+                }
+            }
+        }
 
         const url = `${this.baseUrl}/models/${this.model}:streamGenerateContent?key=${this.apiKey}&alt=sse`;
 
@@ -143,8 +163,15 @@ export class GeminiProvider implements ChatProvider {
                 if (line.startsWith('data: ')) {
                     try {
                         const data = JSON.parse(line.slice(6));
-                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text) yield { text };
+                        const parts = data.candidates?.[0]?.content?.parts ?? [];
+
+                        for (const part of parts) {
+                            if (part.thought && part.text) {
+                                yield { thinking: part.text }
+                            } else if (part.text) {
+                                yield { text: part.text }
+                            }
+                        }
                     } catch {
                         // Skip invalid JSON
                     }
