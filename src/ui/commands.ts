@@ -24,8 +24,9 @@ export function executeCommand(input: string, ctx: CommandContext): boolean {
     const cmd = input.toLowerCase();
 
     switch (cmd) {
-        case 'q':
-        case 'quit':
+        case ':q':
+        case '/quit':
+            process.stdout.write('\x1B[2J\x1B[H');
             ctx.exit();
             return true;
 
@@ -70,7 +71,7 @@ export function executeCommand(input: string, ctx: CommandContext): boolean {
             ctx.setInput('');
             return true;
 
-        case 'help':
+        case '/sshelp':
             ctx.setChatItems(prev => ctx.addChatItem(prev,
                 { type: 'message', id: ctx.nextId(), role: 'user', content: 'help' },
                 { type: 'message', id: ctx.nextId(), role: 'assistant', content: HELP_MESSAGE }

@@ -22,9 +22,10 @@ export interface InvokeOptions {
     tool_choice?: 'auto' | 'none' | 'required';
     signal?: AbortSignal;
     thinking?: boolean;
+    reasoningEffort?: 'low' | 'medium' | 'high';
 }
 
 export interface ChatProvider {
     invoke(messages: ChatMessage[], options?: InvokeOptions): Promise<ChatResponse>;
-    stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string; thinking?: string }>;
+    stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean, reasoningEffort?: 'low' | 'medium' | 'high'): AsyncGenerator<{ text?: string; thinking?: string }>;
 }

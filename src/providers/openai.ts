@@ -10,16 +10,44 @@ export class OpenAIProvider implements ChatProvider {
         this.apiKey = options.apiKey;
     }
 
+    private buildInput(messages: ChatMessage[]): any[] {
+        const input: any[] = [];
+
+        for (const m of messages as any[]) {
+            if (m.role === 'tool') {
+                input.push({
+                    type: 'function_call_output',
+                    call_id: m.tool_call_id,
+                    output: m.content
+                });
+            } else if (m.tool_calls) {
+                if (m.content) {
+                    input.push({ role: 'assistant', content: m.content });
+                }
+                for (const tc of m.tool_calls) {
+                    input.push({
+                        type: 'function_call',
+                        call_id: tc.id,
+                        name: tc.name,
+                        arguments: JSON.stringify(tc.args)
+                    });
+                }
+            } else {
+                input.push({
+                    role: m.role === 'system' ? 'developer' : m.role,
+                    content: m.content
+                });
+            }
+        }
+
+        return input;
+    }
+
+
     async invoke(messages: ChatMessage[], options?: InvokeOptions): Promise<ChatResponse> {
         const body: any = {
             model: this.model,
-            messages: messages.map((m: any) => ({
-                role: m.role,
-                content: m.content,
-                ...(m.tool_call_id && { tool_call_id: m.tool_call_id }),
-                ...(m.name && { name: m.name }),
-                ...(m.tool_calls && { tool_calls: m.tool_calls })
-            }))
+            input: this.buildInput(messages)
         };
 
         if (options?.tools?.length) {
@@ -32,7 +60,14 @@ export class OpenAIProvider implements ChatProvider {
             // }
         }
 
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        if (options?.thinking) {
+            body.reasoning = {
+                effort: options.reasoningEffort ?? 'medium',
+                summary: 'auto'
+            }
+        }
+
+        const response = await fetch(`${this.baseUrl}/responses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,46 +86,70 @@ export class OpenAIProvider implements ChatProvider {
         }
 
         const data = await response.json();
-        const choice = data.choices[0];
-        const message = choice.message;
 
-        const tool_calls: ToolCall[] | undefined = message.tool_calls?.map((tc: any) => {
-            let args = {};
-            try {
-                args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
-            } catch (e) {
-                if (process.env.GLOO_DEBUG === 'true') {
-                    console.error('\n\nDEBUG: Failed to parse tool args:', tc.function.arguments);
+        let content = '';
+        let thinking = '';
+        const tool_calls: ToolCall[] = [];
+
+        for (const item of data.output) {
+            if (item.type === 'message') {
+                for (const part of item.content) {
+                    if (part.type === 'output_text') {
+                        content += part.text;
+                    }
+                }
+            } else if (item.type === 'function_call') {
+                let args = {};
+                try {
+                    args = typeof item.arguments === 'string' ? JSON.parse(item.arguments) : item.arguments ?? {};
+                } catch (e) {
+                    if (process.env.GLOO_DEBUG === 'true') {
+                        console.error('\n\nDEBUG: Failed to parse tool args:', item.arguments);
+                    }
+                }
+
+                tool_calls.push({
+                    id: item.call_id,
+                    name: item.name,
+                    args
+                })
+            } else if (item.type === 'reasoning') {
+                for (const entry of item.summary ?? []) {
+                    if (entry.type === 'summary_text') {
+                        thinking += entry.text;
+                    }
                 }
             }
-            return { id: tc.id, name: tc.function.name, args };
-        });
+        }
 
         return {
-            content: message.content ?? '',
-            thinking: message.reasoning_content ?? undefined,
+            content,
+            thinking: thinking || undefined,
             tool_calls
         };
     }
 
-    async *stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean): AsyncGenerator<{ text?: string, thinking?: string }> {
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    async *stream(messages: ChatMessage[], signal?: AbortSignal, thinking?: boolean, reasoningEffort?: 'low' | 'medium' | 'high'): AsyncGenerator<{ text?: string, thinking?: string }> {
+        const body: any = {
+            model: this.model,
+            input: this.buildInput(messages),
+            stream: true
+        };
+
+        if (thinking) {
+            body.reasoning = {
+                effort: reasoningEffort ?? 'medium',
+                summary: 'auto'
+            };
+        }
+
+        const response = await fetch(`${this.baseUrl}/responses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${this.apiKey}`
             },
-            body: JSON.stringify({
-                model: this.model,
-                messages: messages.map((m: any) => ({
-                    role: m.role,
-                    content: m.content,
-                    ...(m.tool_call_id && { tool_call_id: m.tool_call_id }),
-                    ...(m.name && { name: m.name }),
-                    ...(m.tool_calls && { tool_calls: m.tool_calls })
-                })),
-                stream: true
-            }),
+            body: JSON.stringify(body),
             signal
         });
 
@@ -120,10 +179,12 @@ export class OpenAIProvider implements ChatProvider {
 
                     try {
                         const parsed = JSON.parse(data);
-                        const content = parsed.choices[0]?.delta?.content;
-                        const reasoning = parsed.choices[0]?.delta?.reasoning_content;
-                        if (reasoning) yield { thinking: reasoning }
-                        if (content) yield { text: content };
+
+                        if (parsed.type === 'response.output_text.delta') {
+                            yield { text: parsed.delta };
+                        } else if (parsed.type === 'response.reasoning_summary_text.delta') {
+                            yield { thinking: parsed.delta };
+                        }
                     } catch {
                         // Skip invalid JSON
                     }

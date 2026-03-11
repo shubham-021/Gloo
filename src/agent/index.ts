@@ -42,7 +42,7 @@ export class Agent {
         return this.mode;
     }
 
-    async *run(query: string, signal?: AbortSignal, thinking?: boolean): AsyncGenerator<AgentEvent> {
+    async *run(query: string, signal?: AbortSignal, thinking?: boolean, reasoningEffort?: 'low' | 'medium' | 'high'): AsyncGenerator<AgentEvent> {
         const systemPrompt = getSystemPrompt({
             cwd: process.cwd(),
             date: new Date().toLocaleDateString(),
@@ -95,7 +95,7 @@ export class Agent {
             });
 
             if (!response.tool_calls || response.tool_calls.length === 0) {
-                const stream = this.llm.stream(messages, signal, thinking);
+                const stream = this.llm.stream(messages, signal, thinking, reasoningEffort);
                 let fullText = '';
                 let fullThinking = '';
                 for await (const chunk of stream) {
@@ -116,18 +116,13 @@ export class Agent {
                 return;
             }
 
-            messages.push({
-                role: 'assistant',
-                content: response.content || '',
-                tool_calls: response.tool_calls?.map(tc => ({
-                    id: tc.id,
-                    type: 'function',
-                    function: {
-                        name: tc.name,
-                        arguments: JSON.stringify(tc.args)
-                    }
-                }))
-            } as any);
+            for (const tc of response.tool_calls!) {
+                messages.push({
+                    role: 'assistant',
+                    content: response.content || '',
+                    tool_calls: [{ id: tc.id, name: tc.name, args: tc.args }]
+                } as any);
+            }
 
             for (const toolCall of response.tool_calls) {
                 const tool = toolRegistry.get(toolCall.name);

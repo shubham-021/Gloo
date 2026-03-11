@@ -33,7 +33,7 @@ export interface ModelInfo {
 }
 
 export const OpenAIModels: ModelInfo[] = [
-    { id: 'gpt-5', label: 'gpt-5', supportsThinking: false },
+    { id: 'gpt-5', label: 'gpt-5', supportsThinking: true },
     { id: 'gpt-4.1', label: 'gpt-4.1', supportsThinking: false },
     { id: 'gpt-4o', label: 'gpt-4o', supportsThinking: false },
     { id: 'gpt-4o-mini', label: 'gpt-4o-mini', supportsThinking: false },

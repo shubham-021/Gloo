@@ -61,7 +61,7 @@ program
         const provider = await getListPrompt_In(Object.values(Providers), 'Select your AI provider:');
 
         const models = getModelsForProvider(provider as Providers);
-        const model = await getListPrompt_In(getModelsForProvider(provider as Providers), `Select a ${provider} model:`);
+        const model = await getListPrompt_In(getModelsForProvider(provider as Providers).map(m => m.id), `Select a ${provider} model:`);
         const apiKey = await getPasswordPrompt_In(`Enter your ${provider} API key:`);
         const searchApiKey = await getPasswordPrompt_In('Enter your Tavily Search API key:');
 

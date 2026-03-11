@@ -278,7 +278,7 @@ export function App() {
 
                         {isLoading && !displayText && !currentTool && (
                             <Box paddingLeft={1} marginY={1}>
-                                <Spinner message='Thinking ...' />
+                                <Spinner message=' Thinking ...' />
                             </Box>
                         )}
 

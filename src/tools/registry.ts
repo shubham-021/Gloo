@@ -29,12 +29,11 @@ export class ToolRegistry {
                 case Providers.OpenAI:
                     return {
                         type: 'function',
-                        function: {
-                            name: tool.name,
-                            description: tool.description,
-                            parameters: zodToOpenAI(tool.inputSchema)
-                        }
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: zodToOpenAI(tool.inputSchema)
                     };
+
                 case Providers.Gemini:
                     return {
                         name: tool.name,

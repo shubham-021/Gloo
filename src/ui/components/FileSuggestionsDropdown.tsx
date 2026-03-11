@@ -25,7 +25,7 @@ export function FileSuggestionsDropdown({ suggestions, selectedIndex }: Props) {
                     color={i === selectedIndex ? theme.colors.primary : theme.colors.textMuted}
                     bold={i === selectedIndex}
                 >
-                    {i === selectedIndex ? '› ' : '  '}{s.display}
+                    {i === selectedIndex ? '> ' : '  '}{s.display}
                 </Text>
             ))}
         </Box>
