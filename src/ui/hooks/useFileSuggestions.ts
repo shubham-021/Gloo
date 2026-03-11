@@ -56,5 +56,5 @@ export function useFileSuggestions(input: string, cwd: string) {
         return results.map(r => ({ path: r.target, display: r.target }))
     }, [isActive, query, files]);
 
-    return { suggestions, isActive, query };
+    return { suggestions, isActive, query, setIsActive };
 }

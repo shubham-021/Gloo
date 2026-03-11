@@ -168,8 +168,10 @@ export enum AgentMode {
     ROAST = 'roast'
 }
 
-export type ChatItem =
-    | { type: 'banner'; id: number }
-    | { type: 'message'; id: number; role: 'user' | 'assistant'; content: string }
-    | { type: 'thinking'; id: number; content: string }
-    | { type: 'debug'; id: number; level: 'error' | 'warning' | 'info'; title: string; message: string; details?: string };
+export interface Chats {
+    role: 'user' | 'thinking' | 'response' | 'tool_request';
+    content: string;
+    toolName?: string;
+    toolArgs?: any;
+    toolStatus?: 'pending' | 'accepted' | 'denied';
+}

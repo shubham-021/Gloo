@@ -1,102 +1,79 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Text, useInput } from 'ink';
-import InkTextInput from 'ink-text-input';
-import { theme } from '../theme.js';
-import { useFileSuggestions } from '../hooks/useFileSuggestions.js';
-import { FileSuggestionsDropdown } from './FileSuggestionsDropdown.js';
-
+import { TextareaRenderable } from "@opentui/core"
+import { memo, useEffect, useMemo, useState } from "react";
+import { useFileSuggestions } from "../hooks/useFileSuggestions";
+import { useKeyboard } from "@opentui/react";
+import { FileDropdown } from "./FileDropdown";
 
 interface TextInputProps {
-    value: string;
-    onChange: (value: string) => void;
-    onSubmit: (value: string) => void;
-    placeholder?: string;
+    textareaRef: React.RefObject<TextareaRenderable | null>;
+    handleSubmit: () => void;
 }
 
-export function TextInput({ value, onChange, onSubmit, placeholder }: TextInputProps) {
-    const cwd = process.cwd();
-    const { suggestions, isActive } = useFileSuggestions(value, cwd);
+export const TextInput = memo(({ textareaRef, handleSubmit }: TextInputProps) => {
 
+    const [input, setInput] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [inputKey, setInputKey] = useState(0);
+    const cwd = process.cwd();
+    const { suggestions, isActive, setIsActive } = useFileSuggestions(input, cwd);
 
     useEffect(() => {
-        setSelectedIndex(0)
+        setSelectedIndex(0);
     }, [suggestions.length])
 
-    useInput((input, key) => {
-        if (!isActive || suggestions.length === 0) return;
-        if (key.downArrow) {
-            setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1));
-        } else if (key.upArrow) {
-            setSelectedIndex(i => Math.max(i - 1, 0));
-        } else if (key.tab) {
-            const selected = suggestions[selectedIndex];
-            if (selected) {
-                const lastAtIndex = value.lastIndexOf('@');
-                const newValue = value.slice(0, lastAtIndex + 1) + selected.path + ' ';
-                onChange(newValue);
-                setInputKey(k => k + 1);
+    useKeyboard((key) => {
+        if (isActive && suggestions.length !== 0 && textareaRef.current) {
+            if (key.name === 'down') {
+                setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1));
+            } else if (key.name === 'up') {
+                setSelectedIndex(i => Math.max(i - 1, 0))
+            } else if (key.name === 'tab') {
+                const selected = suggestions[selectedIndex];
+                if (selected) {
+                    const value = textareaRef.current.plainText;
+                    const lastAtIndex = value.lastIndexOf('@');
+                    const newValue = value.slice(0, lastAtIndex + 1) + selected.path + ' ';
+                    textareaRef.current.replaceText(newValue);
+                    setIsActive(false);
+                    textareaRef.current.gotoLineEnd();
+                    textareaRef.current.focus();
+                }
+            } else if (key.name === 'escape') {
+                setIsActive(false);
+                textareaRef.current.focus();
             }
         }
-    }, { isActive: isActive && suggestions.length > 0 });
-
-    // useInput((input, key) => {
-    //     if (input === 'w' || input === 'u' || input === '\x17' || input === '\x15') {
-    //         console.log(`DEBUG: input="${input}" ctrl=${key.ctrl} meta=${key.meta}`);
-    //     }
-
-    //     if ((key.ctrl && input === 'w') || input === '\x17') { // ctrl + w
-    //         const words = value.split(/(\s+)/);
-    //         words.pop();
-    //         if (words.length > 0 && words[words.length - 1].match(/^\s+$/)) words.pop();
-    //         onChange(words.join(''));
-    //         setInputKey(k => k + 1);
-    //     }
-
-    //     if ((key.ctrl && input === 'u') || input === '\x15') { // ctrl + u
-    //         onChange('');
-    //         setInputKey(k => k + 1);
-    //     }
-    // });
-
-    const handleSubmit = (val: string) => {
-        if (isActive && suggestions.length > 0) {
-            const selected = suggestions[selectedIndex];
-            if (selected) {
-                const lastAtIndex = val.lastIndexOf('@');
-                const newValue = val.slice(0, lastAtIndex + 1) + selected.path + ' ';
-                onChange(newValue);
-                setInputKey(k => k + 1);
-                return;
-            }
-        }
-        onSubmit(val);
-    }
+    })
 
     return (
-        <Box flexDirection="column">
-            <Box
-                borderStyle='round'
-                borderColor={theme.colors.primary}
-                paddingX={1}
-                paddingY={0}
-            >
-                <Text color={theme.colors.primary}>gloo {'> '}</Text>
-                <InkTextInput
-                    key={inputKey}
-                    value={value}
-                    onChange={onChange}
-                    onSubmit={handleSubmit}
-                    placeholder={placeholder}
-                />
-            </Box>
+        <box flexDirection={'column'}>
             {isActive && (
-                <FileSuggestionsDropdown
-                    suggestions={suggestions}
-                    selectedIndex={selectedIndex}
-                />
+                <FileDropdown suggestions={suggestions} selectedIndex={selectedIndex} inputHeight={textareaRef.current?.height} />
             )}
-        </Box>
+            <box style={{
+                border: true,
+                borderStyle: 'rounded',
+                borderColor: '#99BB70',
+                flexDirection: 'row',
+                gap: 1,
+                paddingX: 1,
+                // position: 'relative'
+            }}>
+                <text fg={'#99BB70'} flexShrink={0}>{'>'}</text>
+                <textarea
+                    ref={textareaRef}
+                    width='100%'
+                    placeholder="Type your query here or /help for commands"
+                    placeholderColor='#515A46'
+                    focused
+                    style={{ paddingX: 1 }}
+                    onSubmit={handleSubmit}
+                    onContentChange={() => setInput(textareaRef.current?.plainText ?? '')}
+                    // onContentChange={(e) => console.log(JSON.stringify(e))}
+                    keyBindings={[{ name: 'return', action: 'submit' }, { name: 'return', shift: true, action: 'newline' }]}
+                />
+            </box>
+        </box>
     )
-}
+});
+
+export default TextInput;

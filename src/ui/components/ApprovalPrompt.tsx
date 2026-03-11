@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
 import { theme } from '../theme.js';
+import { useKeyboard } from '@opentui/react';
+import { TextAttributes } from '@opentui/core';
 
 interface ApprovalPromptProps {
     toolName: string;
@@ -12,21 +13,21 @@ interface ApprovalPromptProps {
 export function ApprovalPrompt({ toolName, args, onApprove, onDeny }: ApprovalPromptProps) {
     const [selected, setSelected] = useState<'approve' | 'deny'>('approve');
 
-    useInput((input, key) => {
-        if (key.leftArrow || key.rightArrow || input === 'a' || input === 'd') {
+    useKeyboard((key) => {
+        if (key.name === 'left' || key.name === 'right' || key.name === 'a' || key.name === 'd') {
             setSelected(prev => prev === 'approve' ? 'deny' : 'approve');
         }
-        if (key.return) {
+        if (key.name === 'return') {
             if (selected === 'approve') {
                 onApprove();
             } else {
                 onDeny();
             }
         }
-        if (input === 'y' || input === 'Y') {
+        if (key.name === 'y' || key.name === 'Y') {
             onApprove();
         }
-        if (input === 'n' || input === 'N') {
+        if (key.name === 'n' || key.name === 'N') {
             onDeny();
         }
     });
@@ -43,62 +44,62 @@ export function ApprovalPrompt({ toolName, args, onApprove, onDeny }: ApprovalPr
     };
 
     return (
-        <Box
+        <box
             flexDirection="column"
-            borderStyle="round"
+            borderStyle="rounded"
             borderColor={theme.colors.warning}
             paddingX={2}
             paddingY={1}
             marginY={1}
         >
-            <Box gap={1} marginBottom={1}>
-                <Text color={theme.colors.warning}>⚠</Text>
-                <Text color={theme.colors.warning} bold>Approval Required</Text>
-            </Box>
+            <box gap={1} marginBottom={1}>
+                <text fg={theme.colors.warning}>⚠</text>
+                <text fg={theme.colors.warning} attributes={TextAttributes.BOLD}>Approval Required</text>
+            </box>
 
-            <Box flexDirection="column" paddingLeft={2}>
-                <Text color={theme.colors.text}>
-                    <Text bold>{toolName}</Text> wants to execute:
-                </Text>
-                <Box marginY={1}>
-                    <Text color={theme.colors.textMuted}>{formatArgs(args)}</Text>
-                </Box>
-            </Box>
+            <box flexDirection="column" paddingLeft={2}>
+                <text fg={theme.colors.text}>
+                    <text attributes={TextAttributes.BOLD}>{toolName}</text> wants to execute:
+                </text>
+                <box marginY={1}>
+                    <text fg={theme.colors.textMuted}>{formatArgs(args)}</text>
+                </box>
+            </box>
 
-            <Box marginTop={1} gap={2} justifyContent="center">
-                <Box
+            <box marginTop={1} gap={2} justifyContent="center">
+                <box
                     paddingX={2}
                     paddingY={0}
-                    borderStyle="round"
+                    borderStyle="rounded"
                     borderColor={selected === 'approve' ? theme.colors.success : theme.colors.border}
                 >
-                    <Text
-                        color={selected === 'approve' ? theme.colors.success : theme.colors.textDim}
-                        bold={selected === 'approve'}
+                    <text
+                        fg={selected === 'approve' ? theme.colors.success : theme.colors.textDim}
+                        attributes={TextAttributes.BOLD}
                     >
                         {selected === 'approve' ? '► ' : '  '}Approve (Y)
-                    </Text>
-                </Box>
-                <Box
+                    </text>
+                </box>
+                <box
                     paddingX={2}
                     paddingY={0}
-                    borderStyle="round"
+                    borderStyle="rounded"
                     borderColor={selected === 'deny' ? theme.colors.error : theme.colors.border}
                 >
-                    <Text
-                        color={selected === 'deny' ? theme.colors.error : theme.colors.textDim}
-                        bold={selected === 'deny'}
+                    <text
+                        fg={selected === 'deny' ? theme.colors.error : theme.colors.textDim}
+                    // bold={selected === 'deny'}
                     >
                         {selected === 'deny' ? '► ' : '  '}Deny (N)
-                    </Text>
-                </Box>
-            </Box>
+                    </text>
+                </box>
+            </box>
 
-            <Box marginTop={1} justifyContent="center">
-                <Text color={theme.colors.textDim}>
+            <box marginTop={1} justifyContent="center">
+                <text fg={theme.colors.textDim}>
                     Use ←/→ or A/D to select, Enter to confirm
-                </Text>
-            </Box>
-        </Box>
+                </text>
+            </box>
+        </box>
     );
 }

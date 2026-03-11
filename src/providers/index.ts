@@ -22,4 +22,4 @@ export function createProvider(provider: Providers, model: string, apiKey: strin
     }
 }
 
-export { ChatProvider, ChatMessage, ChatResponse, ToolCall, InvokeOptions } from './chat-provider.js';
+export type { ChatProvider, ChatMessage, ChatResponse, ToolCall, InvokeOptions } from './chat-provider.js';

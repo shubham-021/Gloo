@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 import { theme } from '../theme.js';
+import { TextAttributes } from '@opentui/core';
 
 interface DebugBoxProps {
     type: 'error' | 'warning' | 'info';
@@ -27,25 +27,25 @@ export function DebugBox({ type, title, message, details }: DebugBoxProps) {
     };
 
     return (
-        <Box
+        <box
             flexDirection="column"
-            borderStyle="round"
+            borderStyle='rounded'
             borderColor={getBorderColor()}
             paddingX={1}
             marginY={1}
         >
-            <Box gap={1}>
-                <Text color={getBorderColor()}>{getIcon()}</Text>
-                <Text color={getBorderColor()} bold>{title}</Text>
-            </Box>
-            <Box paddingLeft={2} marginTop={1}>
-                <Text color={theme.colors.textMuted}>{message}</Text>
-            </Box>
+            <box gap={1}>
+                <text fg={getBorderColor()}>{getIcon()}</text>
+                <text fg={getBorderColor()} attributes={TextAttributes.BOLD}>{title}</text>
+            </box>
+            <box paddingLeft={2} marginTop={1}>
+                <text fg={theme.colors.textMuted}>{message}</text>
+            </box>
             {details && (
-                <Box paddingLeft={2} marginTop={1}>
-                    <Text color={theme.colors.textDim} dimColor>{details}</Text>
-                </Box>
+                <box paddingLeft={2} marginTop={1}>
+                    <text fg={theme.colors.textDim} attributes={TextAttributes.DIM}>{details}</text>
+                </box>
             )}
-        </Box>
+        </box>
     );
 }

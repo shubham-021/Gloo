@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "nodenext",
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
     "rootDir": "./src",
-    "moduleResolution": "nodenext",
     "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react",
     "strict": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    // "declaration": true
   },
   "exclude": [
     "node_modules",

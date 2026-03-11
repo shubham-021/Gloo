@@ -1,8 +1,6 @@
 export { Banner } from './Banner.js';
-export { Spinner } from './Spinner.js';
-export { StatusBar } from './StatusBar.js';
 export { Message } from './Message.js';
 export { TextInput } from './TextInput.js';
 export { DebugBox } from './DebugBox.js';
 export { ApprovalPrompt } from './ApprovalPrompt.js';
-export { SettingPanel } from './SettingPanel.js';
+export { Loader } from './Loader.js';
