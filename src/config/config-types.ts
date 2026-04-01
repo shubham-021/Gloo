@@ -28,4 +28,4 @@ export interface ResolvedConfig {
 
 export type ConfigStatus =
     | { ready: true }
-    | { ready: false; reason: 'no_profile' | 'no_active_profiles' | 'missing_api_key' | 'no_model' }
+    | { ready: false; reason: 'no_profiles' | 'no_active_profile' | 'missing_api_key' | 'no_model' }
