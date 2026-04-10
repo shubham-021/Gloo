@@ -2,7 +2,7 @@
 
 import { render } from 'ink';
 import React from 'react';
-import { App } from './ui/App.js';
+import renderGloo from './ui/App.js';
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
@@ -137,18 +137,18 @@ program
 
 
 
-program
-    .command('debug')
-    .description('Launch interactive mode with debug output')
-    .action(async () => {
-        process.env.GLOO_DEBUG = 'true';
-        // enterFullscreen();
-        render(React.createElement(App));
-    });
+// program
+//     .command('debug')
+//     .description('Launch interactive mode with debug output')
+//     .action(async () => {
+//         process.env.GLOO_DEBUG = 'true';
+//         // enterFullscreen();
+//         render(React.createElement(App));
+//     });
 
 async function interactiveShell() {
     // enterFullscreen();
-    render(React.createElement(App));
+    renderGloo();
 }
 
 // process.on('exit', delete_curr_STMemory);

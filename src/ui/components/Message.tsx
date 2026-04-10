@@ -7,13 +7,14 @@ interface MessageProps {
   scrollBoxRef: React.RefObject<ScrollBoxRenderable | null>;
   displayText: string;
   displayThinkingText: string;
+  queuedMessages: string[];
 }
 
-export const Message = memo(function Message({ chatMessages, scrollBoxRef, displayText, displayThinkingText }: MessageProps) {
+export const Message = memo(function Message({ chatMessages, scrollBoxRef, displayText, displayThinkingText, queuedMessages }: MessageProps) {
 
   return (
     <box style={{ flexGrow: 1, paddingTop: 1 }}>
-      <scrollbox ref={scrollBoxRef} style={{ height: '100%', contentOptions: { flexDirection: 'column', gap: 1 } }} scrollbarOptions={{ width: 0 }} viewportCulling>
+      <scrollbox ref={scrollBoxRef} style={{ height: '100%', contentOptions: { flexDirection: 'column', gap: 1 } }} scrollbarOptions={{ width: 0 }} viewportCulling stickyScroll stickyStart='bottom'>
         {chatMessages.map((c, index) => {
           // if (c.role === 'tool_request') {
           //   return <ToolApprovalPrompt key={`tool-${index}`} message={c} terminalWidth={terminalWidth} />;
@@ -64,24 +65,6 @@ export const Message = memo(function Message({ chatMessages, scrollBoxRef, displ
           )
         })}
 
-        {(displayText) && (
-          <box key={`user-${displayText.slice(3)}`} style={{
-            border: ['left'],
-            borderStyle: 'rounded',
-            borderColor: '#99BB70',
-            flexDirection: 'row',
-            paddingX: 1,
-            gap: 1,
-            height: 3,
-            minHeight: 3,
-            alignItems: 'center',
-            backgroundColor: '#151613'
-          }}>
-            <text style={{ fg: '#99BB70', attributes: TextAttributes.BOLD }}>{'>'}</text>
-            <text style={{}}>{displayText}</text>
-          </box>
-        )}
-
         {(displayThinkingText) && (
           <box key={`thinking-${displayThinkingText.slice(3)}`} style={{
             flexDirection: 'row',
@@ -94,6 +77,34 @@ export const Message = memo(function Message({ chatMessages, scrollBoxRef, displ
             </text>
           </box>
         )}
+
+        {(displayText) && (
+          <box style={{
+            flexDirection: 'column',
+            paddingX: 1,
+          }}>
+            <text style={{}}>{displayText}</text>
+          </box>
+        )}
+
+        {queuedMessages.map((msg, i) => (
+          <box key={`queued-${i}`} style={{
+            border: ['left'],
+            borderStyle: 'rounded',
+            borderColor: '#515A46',
+            flexDirection: 'row',
+            paddingX: 1,
+            gap: 1,
+            height: 3,
+            minHeight: 3,
+            alignItems: 'center',
+            backgroundColor: '#151613',
+          }}>
+            <text style={{ fg: '#515A46', attributes: TextAttributes.DIM }}>{'◦'}</text>
+            <text style={{ attributes: TextAttributes.DIM }}>{msg}</text>
+            <text style={{ fg: '#515A46', attributes: TextAttributes.DIM | TextAttributes.ITALIC }}>{' queued'}</text>
+          </box>
+        ))}
       </scrollbox>
     </box>
   );
