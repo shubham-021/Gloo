@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "target": "ESNext",
     "rootDir": "./src",
     "outDir": "./dist",
@@ -13,6 +16,7 @@
   },
   "exclude": [
     "node_modules",
-    "src/v1"
+    "src/v1",
+    "bin"
   ]
 }

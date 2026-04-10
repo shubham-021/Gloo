@@ -2,7 +2,7 @@
 
 import { render } from 'ink';
 import React from 'react';
-import renderGloo from './ui/App.js';
+// import renderGloo from './ui/App.js';
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
@@ -148,7 +148,7 @@ program
 
 async function interactiveShell() {
     // enterFullscreen();
-    renderGloo();
+    // renderGloo();
 }
 
 // process.on('exit', delete_curr_STMemory);

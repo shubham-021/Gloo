@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { ScrollBoxRenderable, TextAttributes } from '@opentui/core';
 import { Chats } from '../../types';
+import { markdownSyntaxStyle } from './markdownStyle';
 
 interface MessageProps {
   chatMessages: Chats[],
@@ -40,32 +41,58 @@ export const Message = memo(function Message({ chatMessages, scrollBoxRef, displ
             )
           }
 
+          // if (c.role === 'thinking') {
+          //   return (
+          //     <box style={{
+          //       flexDirection: 'row',
+          //       paddingX: 1,
+          //       alignItems: 'center',
+          //     }}>
+          //       <text style={{ attributes: TextAttributes.DIM, flexDirection: 'row' }}>
+          //         <span style={{ fg: '#99BB70', attributes: TextAttributes.DIM | TextAttributes.BOLD }}>Thinking: </span>
+          //         <span attributes={TextAttributes.ITALIC}>{c.content}</span>
+          //       </text>
+          //     </box>
+          //   )
+          // }
+
           if (c.role === 'thinking') {
             return (
               <box style={{
-                flexDirection: 'row',
+                flexDirection: 'column',
                 paddingX: 1,
-                alignItems: 'center',
               }}>
-                <text style={{ attributes: TextAttributes.DIM, flexDirection: 'row' }}>
-                  <span style={{ fg: '#99BB70', attributes: TextAttributes.DIM | TextAttributes.BOLD }}>Thinking: </span>
-                  <span attributes={TextAttributes.ITALIC}>{c.content}</span>
-                </text>
+                <text style={{ fg: '#99BB70', attributes: TextAttributes.DIM | TextAttributes.BOLD }}>Thinking</text>
+                <markdown
+                  content={c.content}
+                  syntaxStyle={markdownSyntaxStyle}
+                  conceal
+                />
               </box>
             )
           }
 
           return (
-            <box style={{
+            <box key={`response-${index}`} style={{
               flexDirection: 'column',
               paddingX: 1,
             }}>
-              <text style={{}}>{c.content}</text>
+              <markdown
+                content={c.content}
+                syntaxStyle={markdownSyntaxStyle}
+                conceal
+                tableOptions={{
+                  borderStyle: 'rounded',
+                  borderColor: '#515A46',
+                  cellPadding: 1,
+                  wrapMode: 'word',
+                }}
+              />
             </box>
           )
         })}
 
-        {(displayThinkingText) && (
+        {/* {(displayThinkingText) && (
           <box key={`thinking-${displayThinkingText.slice(3)}`} style={{
             flexDirection: 'row',
             paddingX: 1,
@@ -76,14 +103,41 @@ export const Message = memo(function Message({ chatMessages, scrollBoxRef, displ
               <span attributes={TextAttributes.ITALIC}>{displayThinkingText}</span>
             </text>
           </box>
+        )} */}
+
+        {(displayThinkingText) && (
+          <box style={{
+            flexDirection: 'column',
+            paddingX: 1,
+          }}>
+            <text style={{ fg: '#99BB70', attributes: TextAttributes.DIM | TextAttributes.BOLD }}>Thinking</text>
+            <markdown
+              content={displayThinkingText}
+              syntaxStyle={markdownSyntaxStyle}
+              conceal
+              streaming
+            />
+          </box>
         )}
+
 
         {(displayText) && (
           <box style={{
             flexDirection: 'column',
             paddingX: 1,
           }}>
-            <text style={{}}>{displayText}</text>
+            <markdown
+              content={displayText}
+              syntaxStyle={markdownSyntaxStyle}
+              conceal
+              streaming
+              tableOptions={{
+                borderStyle: 'rounded',
+                borderColor: '#515A46',
+                cellPadding: 1,
+                wrapMode: 'word',
+              }}
+            />
           </box>
         )}
 

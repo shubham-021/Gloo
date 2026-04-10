@@ -3,15 +3,18 @@
   "version": "1.0.17",
   "description": "Your own assistant in your cli",
   "bin": {
-    "gloo": "dist/main.js"
+    "gloo": "bin/gloo.ts"
   },
   "type": "module",
   "files": [
-    "dist"
+    "bin",
+    "src",
+    "tsconfig.json",
+    "package.json"
   ],
   "scripts": {
-    "start": "pnpm ts-node ./src/main.ts",
-    "dev": "pnpm run ./src/ui/App.tsx",
+    "start": "bun src/ui/App.tsx",
+    "dev": "bun src/ui/App.tsx",
     "build": "tsc",
     "grammar": "cp -r src/tools/grammars dist/tools/",
     "prepublishOnly": "pnpm build"
